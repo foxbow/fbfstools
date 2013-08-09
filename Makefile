@@ -12,13 +12,13 @@ clean:
 	rm -f bin/*
 
 bin/sortlink: $(S_OBJS)
-	cc $(S_OBJS) -o bin/sortlink
+	gcc $(S_OBJS) -o bin/sortlink
 
 bin/doublet: $(D_OBJS)
-	cc $(D_OBJS) -o bin/doublet
+	gcc $(D_OBJS) -o bin/doublet
 
 bin/mkm3u: $(M_OBJS)
-	cc $(M_OBJS) -o bin/mkm3u
+	gcc $(M_OBJS) -o bin/mkm3u
 
 .c.o:
-	cc $(CFLAGS) -c $<
+	gcc $(CFLAGS) -c $<

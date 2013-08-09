@@ -47,7 +47,8 @@ struct entry_t *runner, *buff;
 struct entry_t *root=NULL;
 struct blacklist_t *bl=NULL;
    
-	getcwd( curdir, MAXPATHLEN );
+	if( NULL == getcwd( curdir, MAXPATHLEN ) )
+		fail( "Could not get current directory!", "", errno);
 
 	while( ( c = getopt( argc, argv, "s:t:b:" ) ) != -1 ) {
 		switch( c ) {
@@ -90,8 +91,9 @@ struct blacklist_t *bl=NULL;
 	
 	while(NULL != root->prev) root=root->prev;
 
-fail("Eignetlich gibt es mich gar nicht..");
+fail("Eignetlich gibt es mich gar nicht..", "", 0 );
 	
+#if 0
 	while( NULL != root->next ){
 		runner=root->next;
 		while( NULL != runner ){
@@ -133,6 +135,7 @@ fail("Eignetlich gibt es mich gar nicht..");
 		activity();
 	}
 	// free( root );
+#endif
 	
 	printf("Done.\n");
 	fflush( stdout );

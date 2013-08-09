@@ -51,7 +51,8 @@ char c;
 struct entry_t *runner, *buff;
 struct entry_t *root=NULL;
 	
-	getcwd( curdir, MAXPATHLEN );
+	if( NULL == getcwd( curdir, MAXPATHLEN ) )
+		fail( "Could not get current directory!", "", errno);
 
 	while( ( c = getopt( argc, argv, "s:t:r:" ) ) != -1 ) {
 		switch( c ) {
@@ -98,7 +99,7 @@ struct entry_t *root=NULL;
 				if(  result >= trigger ){
 					printf( "(1) %s/%s\n", root->path, root->name );
 					printf( "(2) %s/%s\n", runner->path, runner->name ); 
-					printf( "(%i/%i) Delete (1/2) or keep? ",  result, ABS( root->length - runner->length )  ); fflush(stdout);
+					printf( "(%i/%li) Delete (1/2) or keep? ",  result, ABS( root->length - runner->length )  ); fflush(stdout);
 					c=getchar();
 					while(c!=10){
 						switch(c){
