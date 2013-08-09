@@ -1,5 +1,5 @@
 OBJS=doublet.o mkm3u.o recurse.o fail.o fncmp.o activity.o
-s_OBJS=sortlink.o recurse.o fail.o activity.o
+S_OBJS=sortlink.o recurse.o fail.o activity.o
 D_OBJS=doublet.o recurse.o fail.o fncmp.o activity.o
 M_OBJS=mkm3u.o recurse.o fail.o activity.o
 EXES=bin/doublet bin/mkm3u bin/sortlink
