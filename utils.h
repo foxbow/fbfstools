@@ -1,8 +1,11 @@
-#ifndef RECURSE_H
-#define RECURSE_H
+#ifndef UTILS_H
+#define UTILS_H
 
+#include <errno.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 /* Directory access */
 #include <unistd.h>
 #include <sys/types.h>
@@ -19,8 +22,11 @@
   #include <sys/statvfs.h>
 #endif
 
-
 #include <time.h>
+
+
+// Represents a string
+typedef unsigned char* strval_t;
 
 /* Default values */
 /* Max size of an MP3 file - to avoid full albums */
@@ -31,6 +37,9 @@
 #define BUFFSIZE 512*1024
 /* Default target for copying */
 #define TARGETDIR "player/"
+// #define ARRAYLEN 676
+#define ARRAYLEN 85
+#define BITS 680
 
 #ifndef MAXPATHLEN
   #define MAXPATHLEN 256
@@ -55,5 +64,14 @@ struct blacklist_t {
 
 struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl );
 struct blacklist_t *loadBlacklist( char *path );
+
+
+// extern int rpos = 0;
+void activity();
+void fail( const char* msg, const char* info, int error );
+int fncmp( const char* str1, const char* str2 );
+int computestrval( const char* str, strval_t strval );
+int fnvcmp( const strval_t val1, const strval_t val2 );
+char *toLower( char *text );
 
 #endif

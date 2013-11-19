@@ -1,10 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "utils.h"
 #include <getopt.h>
-#include "recurse.h"
-#include "activity.h"
-#include "fail.h"
 
 /* Default values */
 /* Max size of an MP3 file - to avoid full albums */
@@ -42,7 +37,8 @@ int main( int argc, char **argv ){
    
 	FILE *pl;
    
-	getcwd( curdir, MAXPATHLEN );
+	if( NULL == getcwd( curdir, MAXPATHLEN ) ) fail( "Could not get current dir!", "", errno );
+
 	strcpy( target, "playlist.m3u" );
 
 	while( ( c = getopt( argc, argv, "s:b:t:v:" ) ) != -1 ) {

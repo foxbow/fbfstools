@@ -1,95 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-/* Directory access */
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <ctype.h>
-
-#ifdef __MINGW_H
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
-  #include <dir.h>
-#else
-  #include <sys/types.h>
-  #include <sys/statvfs.h>
-#endif
-
-/* Error */
-#include <errno.h>
-#include <strings.h>
-
-#include <time.h>
-
-/* Default values */
-/* Max size of an MP3 file - to avoid full albums */
-#define MAXSIZE 15*1024
-/* Min size - to avoid fillers */
-#define MINSIZE 1024
-/* Buffer for copying files */
-#define BUFFSIZE 512*1024
-/* Default target for copying */
-#define TARGETDIR "player/"
-
-#ifndef MAXPATHLEN
-  #define MAXPATHLEN 256
-#endif
-#define RANDOM(x) rand()%x
-
-struct entry_t {
-	struct entry_t *prev;
-  char path[MAXPATHLEN];
-  long int length;
-  struct entry_t *next;
-};
-
-/**
- * structure to hold names of directories that should be ignored
- */
-struct blacklist_t {
-	char dir[MAXPATHLEN];
-	struct blacklist_t *next;
-};
-
-/* 
- * derelict struct to rebuild directory structure in memory.
- * 
-struct dirnode_t {
-	struct dirnode_t *prev;
-	char path[MAXPATHLEN];
-	struct title_t *entries;
-	struct dirnode_t *directories;
-	struct dirnode_t *next;
-};
- */
+#include "utils.h"
+#include <getopt.h>
 
 int verbosity = 1;
-int rpos = 0;
-char roller[5]="|/-\\";
-
-void fail( const char* msg, const char* info, int error ){
-/*
- * Print errormessage, errno and quit
- * msg - Message to print
- * info - second part of the massage, for instance a variable 
- * error - errno that was set.
- */ 
-  if(0 == error)
-		fprintf(stderr, "\n%s%s\n", msg, info );
-  else		
-		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, error, strerror( error ) );
-	fprintf(stderr, "Press [ENTER] to terminate.\n" );		
-	fflush( stdout );
-	fflush( stderr );
-	while(getc(stdin)!=10);	
-	exit(error);
-}
-
-char *toLower( char *text ){
-	int i;
-	for(i=0;i<strlen(text);i++) text[i]=tolower(text[i]);
-	return text;
-}
 
 long freekb(const char * part) {
 /**
@@ -108,13 +20,6 @@ struct statvfs buf;
 	else
 		fail( "Couldn't get free space for ", part, errno );
 #endif
-/*
-struct statfs s;
-	if (0 == statfs(part, &s))
-		return s.f_bavail;
-	else
-		fail( "Couldn't get free space for ", part, errno );
-*/
 	return 0;
 }
 
@@ -126,45 +31,6 @@ int ismusic( char *file ){
 	  || ( strstr( file, ".MP3" ) != NULL )
 	   ) return -1;
 	else return 0;
-}
-
-struct blacklist_t *loadBlacklist( char *path ){
-	FILE *file = NULL;
-	struct blacklist_t *root = NULL;
-	struct blacklist_t *ptr = NULL;
-	char *buff;
-
-	buff=malloc( MAXPATHLEN );
-	if( !buff ) fail( "Out of memory", "", errno );
-	
-	file=fopen( path, "r" );
-	if( !file ) fail("Couldn't open blacklist ", path,  errno);
-	
-	while( !feof( file ) ){
-		buff=fgets( buff, MAXPATHLEN, file );
-		if( buff && strlen( buff ) > 1 ){
-			if( !root ){
-				root=malloc( sizeof( struct blacklist_t ) );
-				ptr=root;
-			}else{
-				ptr->next=malloc( sizeof( struct blacklist_t ) );
-				ptr=ptr->next;
-			}
-			if( !ptr ) fail( "Out of memory!", "", errno );
-			strncpy( ptr->dir, toLower(buff), strlen( buff )-1 );
-			ptr->dir[ strlen(buff)-1 ]=0;
-			if( verbosity > 1 ) {
-				printf( "blacklist: %s\n", ptr->dir );
-				fflush( stdout );
-			}
-		}
-	}
-	
-  fflush( stdout );
-  
-	free( buff );
-	fclose( file );
-	return root;
 }
 
 int isValidFile( const char *name, struct blacklist_t *bl ){
@@ -196,53 +62,6 @@ int isValidFile( const char *name, struct blacklist_t *bl ){
 	return -1;
 }
 
-void roll(){
-	rpos=(rpos+1)%4;			
-	printf( "%c\r", roller[rpos] ); fflush( stdout );
-}	
-
-struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl ){
-/* */
-	struct entry_t *buff=NULL;
-	char dirbuff[MAXPATHLEN];
-	DIR *directory;
-	FILE *file;
-	struct dirent *entry;
-	
-	directory=opendir( curdir );
-	if (directory != NULL){
-	  entry = readdir( directory );
-		if( verbosity ){
-			roll();
-		}
- 		while( entry != NULL ){
- 			if( isValidFile( entry->d_name, bl ) ){
- 		 		sprintf( dirbuff, "%s/%s", curdir, entry->d_name );
-   		 	files=recurse( dirbuff, files, bl );
- 			}
-		  entry = readdir( directory );
-  	}
-		closedir( directory );
-	}else{
-		if(ismusic(curdir)){
-			file=fopen(curdir, "r");
-			if( NULL == file ) fail("Couldn't open file ", curdir,  errno);
-			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", curdir, errno );
-			buff=(struct entry_t *)malloc(sizeof(struct entry_t));
-			if(buff == NULL) fail("Out of memory!", "", errno);
-			buff->prev=files;
-			buff->next=NULL;
-			if(files != NULL)files->next=buff;
-			strcpy( buff->path, curdir );
-			buff->length=ftell( file )/1024;
-			files=buff;
-			fclose(file);
-		}
-	}
-
-	return files;	
-}
-
 /* 
  * Deletes all files in the given directory.
  * Ignores subdirs and files starting with a dot.
@@ -266,7 +85,7 @@ void clean( char* target ){
 			if( NULL == dirbuff ){
 				if( -1 == unlink( buff ) ) fail( "Couldn't delete file ", buff, errno );
 				if( verbosity > 0 ){
-					roll();
+					activity();
 				}
 			}else{
 				closedir( dirbuff );
@@ -308,7 +127,7 @@ void copy( struct entry_t *title, const char* target, int index ){
 		if( verbosity > 0 ){
 			if( verbosity > 2 ) printf( "Copy %s to %s ", title->path, filename );
 			else if( verbosity == 1 )  printf( "Copy Track %03i ", index );
-			roll();
+			activity();
 		}
 	}
 	
@@ -413,7 +232,8 @@ int main( int argc, char **argv ){
 	int mbsize=0;
 	
 	srand((unsigned int)time(NULL));
-	getcwd( curdir, MAXPATHLEN );
+	if( NULL == getcwd( curdir, MAXPATHLEN ) )
+		fail( "Could not get current dir!", "", errno );
 	strcpy( target, TARGETDIR );
 
   while( ( c = getopt( argc, argv, "s:t:m:nb:v:" ) ) != -1 ) {
@@ -507,4 +327,3 @@ int main( int argc, char **argv ){
 	
 	return 0;
 }
-
