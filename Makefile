@@ -3,7 +3,8 @@ S_OBJS=sortlink.o utils.o
 D_OBJS=doublet.o utils.o
 M_OBJS=mkm3u.o utils.o
 F_OBJS=fillstick.o utils.o
-EXES=bin/doublet bin/mkm3u bin/sortlink bin/fillstick
+P_OBJS=mkplaylists.o utils.o
+EXES=bin/doublet bin/mkm3u bin/sortlink bin/fillstick bin/mkplaylists
 CFLAGS=-c -pedantic -Os -std=c99
 
 all: $(EXES)
@@ -11,6 +12,9 @@ all: $(EXES)
 clean:
 	rm -f $(OBJS)
 	rm -f bin/*
+
+bin/mkplaylists: $(P_OBJS)
+	gcc $(P_OBJS) -o bin/mkplaylists
 
 bin/fillstick: $(F_OBJS)
 	gcc $(F_OBJS) -o bin/fillstick

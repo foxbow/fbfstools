@@ -67,6 +67,7 @@ struct blacklist_t *loadBlacklist( char *path );
 
 
 // extern int rpos = 0;
+// int isValid( const char *name, struct blacklist_t *bl );
 void activity();
 void fail( const char* msg, const char* info, int error );
 int fncmp( const char* str1, const char* str2 );

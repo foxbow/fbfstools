@@ -2,6 +2,9 @@
 
 int rpos=0;
 
+/**
+ * show activity roller on console
+ */
 void activity(){
 	char roller[5]="|/-\\";
 
@@ -28,6 +31,9 @@ void fail( const char* msg, const char* info, int error ){
 	return;
 }
 
+/*
+ * Inplace conversion of a string to lowercase
+ */
 char *toLower( char *text ){
 	int i;
 	for(i=0;i<strlen(text);i++) text[i]=tolower(text[i]);
@@ -67,6 +73,9 @@ struct blacklist_t *loadBlacklist( char *path ){
 	return root;
 }
 
+/**
+ * Check if a file is a music file
+ */
 int isMusic( const char *name ){
 	char loname[MAXPATHLEN];
 	strncpy( loname, name, MAXPATHLEN );
@@ -146,10 +155,6 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t
 	return files;
 }
 
-/**
- * Similarity check for strings
- * Will check against pairs of letters
-**/
 void setBit( int pos, strval_t val ){
 	int bytepos;
 	unsigned char set=0;
