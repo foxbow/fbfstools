@@ -3,6 +3,70 @@
 int rpos=0;
 
 /**
+ * helperfunction for sorting entries
+ */
+int compare( const void* op1, const void* op2 )
+{
+    const char **p1 = (const char **) op1;
+    const char **p2 = (const char **) op2;
+
+    return( strcmp( *p1, *p2 ) );
+}
+
+/**
+ * Sort a list of entries
+ */
+struct entry_t *sort( struct entry_t *files ){
+	char **titles;
+	int num=0;
+	int i;
+	struct entry_t *buff=files;
+
+	while( buff != NULL ) {
+		num++;
+		buff=buff->next;
+	}
+
+	titles=(char **)calloc( num, sizeof(char *) );
+	for( i=0; i<num; i++) titles[i]=(char*)calloc( MAXPATHLEN, sizeof( char ) );
+
+	buff=files;
+	i=0;
+	while( buff != NULL ) {
+		strcpy( titles[i++], buff->name );
+		buff=buff->next;
+	}
+
+    qsort( titles, num, sizeof( char * ), compare );
+
+	buff=files;
+	i=0;
+	while( buff != NULL ) {
+		strcpy( buff->name, titles[i++] );
+		buff=buff->next;
+	}
+
+	for( i=0; i<num; i++) free(titles[i]);
+	free(titles);
+
+    return files;
+}
+
+/**
+ * clean up a list of entries
+ */
+struct entry_t *wipe( struct entry_t *files ){
+	struct entry_t *buff=files;
+	while( buff != NULL ){
+		files=buff;
+		buff=files->next;
+		free(files);
+	}
+	return NULL;
+}
+
+
+/**
  * show activity roller on console
  */
 void activity(){
@@ -19,7 +83,7 @@ void fail( const char* msg, const char* info, int error ){
  * info - second part of the massage, for instance a variable
  * error - errno that was set.
  */
-	if(error < 1 )
+	if(error == 0 )
 		fprintf(stderr, "\n%s%s\n", msg, info );
 	else
 		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, error, strerror( error ) );
@@ -27,7 +91,7 @@ void fail( const char* msg, const char* info, int error ){
 	fflush( stdout );
 	fflush( stderr );
 	while(getc(stdin)!=10);
-	if (error < 0 ) exit(error);
+	if (error != 0 ) exit(error);
 	return;
 }
 

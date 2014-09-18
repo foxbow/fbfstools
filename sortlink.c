@@ -88,7 +88,7 @@ struct blacklist_t *bl=NULL;
 	
 	while(NULL != root->prev) root=root->prev;
 
-fail("Eignetlich gibt es mich gar nicht..", "", 0 );
+fail("Eigentlich gibt es mich gar nicht..", "", 0 );
 	
 #if 0
 	while( NULL != root->next ){

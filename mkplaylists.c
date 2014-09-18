@@ -8,153 +8,140 @@
 #include "utils.h"
 #include <sys/stat.h>
 
-int compare( const void* op1, const void* op2 )
-{
-    const char **p1 = (const char **) op1;
-    const char **p2 = (const char **) op2;
-
-    return( strcmp( *p1, *p2 ) );
+/**
+ * helperfunction for scandir() - just return unhidden directories
+ */
+int dsel( const struct dirent *entry ){
+	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_DIR ) );
 }
 
-struct entry_t *sort( struct entry_t *files ){
-	char **titles;
-	int num=0;
-	int i;
-	struct entry_t *buff=files;
-
-	while( buff != NULL ) {
-		num++;
-		buff=buff->next;
-	}
-
-	titles=(char **)calloc( num, sizeof(char *) );
-	for( i=0; i<num; i++) titles[i]=(char*)calloc( MAXPATHLEN, sizeof( char ) );
-
-	buff=files;
-	i=0;
-	while( buff != NULL ) {
-		strcpy( titles[i++], buff->name );
-		buff=buff->next;
-	}
-
-    qsort( titles, num, sizeof( char * ), compare );
-
-	buff=files;
-	i=0;
-	while( buff != NULL ) {
-		strcpy( buff->name, titles[i++] );
-		buff=buff->next;
-	}
-
-	for( i=0; i<num; i++) free(titles[i]);
-	free(titles);
-
-    return files;
+/**
+ * helperfunction for scandir() - just return unhidden regular files
+ */
+int fsel( const struct dirent *entry ){
+	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_REG ) );
 }
 
-struct entry_t *wipe( struct entry_t *files ){
-	struct entry_t *buff=files;
-	while( buff != NULL ){
-		files=buff;
-		buff=files->next;
-		free(files);
+/**
+ * create the name.for a playlist based on the directory
+ * In best case it's the last two directories (Artist - Album.m3u)
+ * Or it's just one directory (Album.m3u)
+ * Or it's just playlist.m3u
+ */
+char *genPLName( char *plname, const char *cd ){
+	char *p0, *p1;
+	char curdir[MAXPATHLEN];
+
+	// Create working copy of the path and cut off trailing /
+	strncpy( curdir, cd, MAXPATHLEN );
+	curdir[strlen(curdir)-1]=0;
+
+	// Start with the current path
+	strncpy( plname, cd, MAXPATHLEN );
+
+	p1=strrchr( curdir, '/' );
+	if( p1 == NULL ) {
+		// No updir found, so it's the generic name
+		strncat( plname, "playlist", MAXPATHLEN-strlen( plname ) );
+	} else {
+		// cut off the last dir
+		*p1=0;
+		p1++;
+		p0=strrchr( curdir, '/' );
+		if( ( NULL == p0 ) && ( strlen(curdir) < 2 ) ) {
+			// No second updir found, so it's just the last dir name
+			strncat( plname, p1, MAXPATHLEN-strlen( plname ) );
+		} else {
+			if( NULL == p0 ) {
+				p0 = curdir;
+			} else {
+				*p0=0;
+				p0++;
+			}
+			strncat( plname, p0, MAXPATHLEN-strlen( plname ) );
+			strncat( plname, " - ", MAXPATHLEN-strlen( plname ) );
+			strncat( plname, p1, MAXPATHLEN-strlen( plname ) );
+		}
 	}
-	return NULL;
+	strncat( plname, ".m3u", MAXPATHLEN-strlen( plname ) );
+
+	return plname;
 }
 
-int traverse( char *curdir ){
-/* */
-	struct entry_t *files=NULL;
-	struct entry_t *buff=NULL;
+/**
+ * recurse through a directory, check each (sub)directory
+ * for music files and write a playlist into each directory
+ * unless one is already present.
+ */
+int traverse( char *cd ){
+	char curdir[MAXPATHLEN];
 	char dirbuff[MAXPATHLEN];
 	char plname[MAXPATHLEN];
-	struct stat st;
-	DIR *directory;
 	FILE *file;
-	struct dirent *entry;
-	char *pos;
 
-	directory=opendir( curdir );
-	if (directory != NULL){
-		entry = readdir( directory );
-		activity();
-		while( entry != NULL ){
-			if( isValid( entry->d_name, NULL ) ){
-				sprintf( dirbuff, "%s/%s", curdir, entry->d_name );
-				if( stat( dirbuff, &st ) ) {
-					fail( "stat() failed on: ", curdir, errno );
-				}
-				if( S_ISDIR( st.st_mode ) ) {
-					traverse( dirbuff );
-				} else {
-					if( strstr( dirbuff, ".mp3" ) ) {
-						buff=(struct entry_t *)malloc(sizeof(struct entry_t));
-						if(buff == NULL) fail("Out of memory!", "", errno);
-						buff->prev=files;
-						buff->next=NULL;
-						if(files != NULL)files->next=buff;
+	struct dirent **namelist;
+	int i,n;
+	int haspl=0;
+	int hasmus=0;
 
-						pos=strrchr( dirbuff , '/' );
-						if( NULL == pos ){
-							strcpy( buff->name, dirbuff );
-							buff->path[0]='\0';
-							fprintf( stderr, "No '/' in %s! This should not be possible!", curdir );
-						}else{
-							strcpy( buff->name, pos+1 );
-							*pos='\0';
-							strcpy( buff->path, dirbuff );
-						}
-						files=buff;
-					}
-					if( strstr( dirbuff, ".m3u" ) ) {
-						files=wipe(files);
-						break;
-					}
-				}
-			} // skip hidden files/dirs
-			entry = readdir( directory );
-		}
-		closedir( directory );
+	strncpy( curdir, cd, MAXPATHLEN );
+	if(curdir[strlen(curdir)-1]!='/'){
+		strncat( curdir, "/", MAXPATHLEN-strlen( curdir ) );
+	}
 
-		if(files){
-			char *p0, *p1;
-			strcpy( plname, curdir );
-			strcat( plname, "/" );
-			p1=strrchr( curdir, '/' );
-			if( p1 == NULL ) {
-				strcat( plname, "playlist" );
-			} else {
-				*p1=0;
-				p1++;
-				p0=strrchr( curdir, '/' );
-				if( p0 == NULL ) {
-					strcat( plname, p1 );
-				} else {
-					*p0=0;
-					p0++;
-					strcat( plname, p0 );
-					strcat( plname, " - " );
-					strcat( plname, p1 );
-				}
+	/**
+	 * collect files and put them into a playlist unless there is already one
+	 */
+	n = scandir( curdir, &namelist, fsel, alphasort);
+	if (n < 0) {
+		fail("scandir", curdir, errno );
+	} else {
+		 // check if one of the files is a playlist
+		for (i = 0; i < n; i++) {
+			// Once a playlist is found we can stop
+			if( strstr( namelist[i]->d_name, ".m3u" ) ){
+				haspl=1;
+				break;
 			}
-			strcat( plname, ".m3u" );
+			// Try not to check each and every file after the first is found
+			if( (!hasmus) && isMusic( namelist[i]->d_name ) ){
+				hasmus=1;
+			}
+		}
 
+		// If there is music but no playlist, create one
+		if( ( 1 == hasmus ) && ( 0 == haspl ) ) {
+			genPLName( plname, curdir );
 			file=fopen( plname, "w" );
 			if( ! file ) fail( "Write open failed for ", plname, errno );
 
-			buff=files;
-			while( buff->prev != NULL ) buff=buff->prev;
-			buff=sort(buff);
-			while( buff != NULL ){
-				fprintf( file, "%s\n", buff->name );
-				buff=buff->next;
+			// Write all music filenames into the playlist
+			for( i=0; i<n; i++ ) {
+				if( isMusic( namelist[i]->d_name ) ) fprintf( file, "%s\n", namelist[i]->d_name );
 			}
-
-			plname[0]=0;
-			files=wipe(files);
+			fclose( file );
 		}
-	}else{
-		fprintf( stderr, "%s is not a directory!\n", curdir );
+		// Clean up the namelist
+		for (i = 0; i < n; i++) {
+			free( namelist[i] );
+		}
+		free( namelist );
+	}
+
+	/**
+	 * collect directories and run trough them as well
+	 * clean up the namelist in the same go
+	 */
+	n = scandir( curdir, &namelist, dsel, alphasort);
+	if (n < 0) {
+		fail("scandir", curdir, errno );
+	} else {
+		for (i = 0; i < n; i++) {
+			snprintf( dirbuff, MAXPATHLEN, "%s%s", curdir, namelist[i]->d_name );
+			traverse( dirbuff );
+			free( namelist[i] );
+		}
+		free( namelist );
 	}
 
 	return 0;
@@ -162,6 +149,10 @@ int traverse( char *curdir ){
 
 
 int main( int argc, char **argv ) {
-	traverse( "." );
+	if( argc == 1 ) {
+		traverse( "." );
+	} else {
+		traverse( argv[1] );
+	}
 	return 0;
 }

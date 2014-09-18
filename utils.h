@@ -62,6 +62,13 @@ struct blacklist_t {
 	struct blacklist_t *next;
 };
 
+/**
+ * entry helper functions
+ */
+struct entry_t *sort( struct entry_t *files );
+struct entry_t *wipe( struct entry_t *files );
+
+
 struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl );
 struct blacklist_t *loadBlacklist( char *path );
 
@@ -70,6 +77,7 @@ struct blacklist_t *loadBlacklist( char *path );
 // int isValid( const char *name, struct blacklist_t *bl );
 void activity();
 void fail( const char* msg, const char* info, int error );
+int isMusic( const char *name );
 int fncmp( const char* str1, const char* str2 );
 int computestrval( const char* str, strval_t strval );
 int fnvcmp( const strval_t val1, const strval_t val2 );
