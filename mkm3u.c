@@ -21,19 +21,14 @@ void usage( char *progname ){
 	printf( "-s <path>  : set path to directory with music [current dir]\n" );
 	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
 	printf( "-v <num>   : Verbosity (0=quiet, 1=process, 2=1+wait for enter, 3=2+verbose output) [1]\n" );
+	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
 	printf( "[playlist] : Name of playlist to use [playlist.m3u]\n" );
 	exit(0);
 }
 
-void shufflem3u( struct entry_t *list, FILE *fp ) {
+void shufflem3u( struct entry_t *list, int cnt,  FILE *fp ) {
 	struct entry_t *base;
-	int i, cnt=1, no=0;
-
-	// rewind to the beginning of the list
-	while( list->prev != NULL ){
-		list=list->prev;
-		cnt++;
-	}
+	int i, no=0;
 
 	base=list;
 
@@ -80,6 +75,8 @@ int main( int argc, char **argv ){
 	char target[MAXPATHLEN];
 	char blname[MAXPATHLEN];
 	char c;
+	int mix=0;
+	int cnt=1;
 
 	FILE *pl;
 
@@ -87,8 +84,11 @@ int main( int argc, char **argv ){
 
 	strcpy( target, "playlist.m3u" );
 
-	while( ( c = getopt( argc, argv, "s:b:v:" ) ) != -1 ) {
+	while( ( c = getopt( argc, argv, "ms:b:v:" ) ) != -1 ) {
 		switch( c ) {
+		case 'm':
+			mix=1;
+			break;
 		case 's': 
 			strcpy( curdir, optarg );
 			if( ( strlen(curdir) == 2 ) && ( curdir[1] == ':' ) ) 
@@ -116,6 +116,8 @@ int main( int argc, char **argv ){
 	printf( "Using MP3/OGG files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
 	if( blacklist )
 		printf( "Using %s as blacklist\n", blname );
+	if( mix )
+		printf( "Shuffling titles\n" );
 	printf( "Press enter to continue or CTRL-C to stop.\n" );
 	fflush( stdout );
 	if (verbosity) while(getchar()!=10);
@@ -124,13 +126,34 @@ int main( int argc, char **argv ){
 	if( NULL == pl ) fail( "Could not open ", target, errno );
 
 	root=recurse( curdir, root, blacklist );
-	shufflem3u( root, pl );
-	/*
-	while( NULL != root ){
-		fprintf( pl, "%s/%s\n", root->path, root->name );
-		root=root->prev;
+
+	// rewind to the beginning of the list
+	if( NULL != root ) {
+		while( NULL != root->prev ){
+			root=root->prev;
+			cnt++;
+		}
+
+		if( mix ) {
+			shufflem3u( root, cnt, pl );
+		}
+		else {
+			while( NULL != root ){
+				fprintf( pl, "%s/%s\n", root->path, root->name );
+				if( NULL != root->next ) {
+					root=root->next;
+					free(root->prev);
+					root->prev=NULL;
+				} else {
+					free( root );
+					root=NULL;
+				}
+			}
+		}
 	}
-	 */
+	else {
+		printf( "No music found at %s!\n", curdir );
+	}
 
 	fclose( pl );
 	printf("Done.\n");
