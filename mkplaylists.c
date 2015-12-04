@@ -96,7 +96,7 @@ int traverse( char *cd ){
 	if (n < 0) {
 		fail("scandir", curdir, errno );
 	} else {
-		 // check if one of the files is a playlist
+		// check if one of the files is a playlist
 		for (i = 0; i < n; i++) {
 			// Once a playlist is found we can stop
 			if( strstr( namelist[i]->d_name, ".m3u" ) ){
@@ -146,7 +146,6 @@ int traverse( char *cd ){
 
 	return 0;
 }
-
 
 int main( int argc, char **argv ) {
 	if( argc == 1 ) {

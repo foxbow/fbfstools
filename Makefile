@@ -1,6 +1,7 @@
 EXES=bin/doublet bin/mkm3u bin/fillstick bin/mkplaylists 
 # bin/sortlink 
 
+# Keep object files
 .PRECIOUS: %.o
 
 all: $(EXES)

@@ -4,62 +4,21 @@
 int verbosity = 1;
 
 long freekb(const char * part) {
-/**
- */
 #ifdef __MINGW_H
-DWORD free;
-PULARGE_INTEGER buff=NULL;
+	DWORD free;
+	PULARGE_INTEGER buff=NULL;
 	if(GetDiskFreeSpaceEx(part, (PULARGE_INTEGER)&free, buff, buff))
 		return free/1024;
 	else
-	  fail( "Couldn't get free space for ", part, errno );	
+		fail( "Couldn't get free space for ", part, errno );
 #else
-struct statvfs buf;
+	struct statvfs buf;
 	if (0 == statvfs(part, &buf))
 		return (buf.f_bavail*buf.f_bsize)/1024;
 	else
 		fail( "Couldn't get free space for ", part, errno );
 #endif
 	return 0;
-}
-
-int ismusic( char *file ){
-/*
- * checks if the given filename ends on mp3
- */	
-	if ( ( strstr( file, ".mp3" ) != NULL )
-	  || ( strstr( file, ".MP3" ) != NULL )
-	   ) return -1;
-	else return 0;
-}
-
-int isValidFile( const char *name, struct blacklist_t *bl ){
-/**
- * filters out invalid files/dirs like hidden (starting with '.')
- * or names that are in the blacklist.
- */
-	char *buff;
-	struct blacklist_t *ptr = bl;
-	
-	buff=calloc( MAXPATHLEN, sizeof( char ) );
-	if (NULL == buff) fail( "Out of memory!", "", errno );
-	
-	if( name[0] == '.' ) return 0;
-	strcpy( buff, name );
-	toLower( buff );
-	while( ptr ){
-		if( strstr( buff, ptr->dir ) ){
-			if( verbosity > 2 ){
-				printf( "\n- %s (%s)", name, ptr->dir ); 
-				fflush( stdout );
-			}
-			free(buff);
-			return 0;
-		}
-		ptr=ptr->next;
-	}
-	free(buff);
-	return -1;
 }
 
 /* 
@@ -71,13 +30,13 @@ void clean( char* target ){
 	DIR *directory;
 	DIR *dirbuff;
 	struct dirent *entry;
-	
+
 	directory=opendir( target );
 	if ( NULL == directory ){
 		fail( "Target is no directory ", target, errno );
 	}
-	
-  entry = readdir( directory );
+
+	entry = readdir( directory );
 	while( entry != NULL ){
 		if( entry->d_name[0]!='.' ){
 			sprintf( buff, "%s%s", target, entry->d_name );
@@ -91,34 +50,34 @@ void clean( char* target ){
 				closedir( dirbuff );
 			}
 		}
-	  entry = readdir( directory );
+		entry = readdir( directory );
 	}
 	closedir( directory );
 }
 
-void copy( struct entry_t *title, const char* target, int index ){
-/* 
+/*
  * copy the given title onto the target. The target file
  * will be named track<index>.mp3
  */
+void copy( struct entry_t *title, const char* target, int index ){
 	FILE *in, *out;
 	char filename[ MAXPATHLEN ];
 	unsigned char *buffer;
 	int size;
-	
+
 	buffer=malloc( BUFFSIZE );
 	if( NULL == buffer ) fail( "Out of memory!", "", errno );
 	sprintf( filename, "%strack%03i.mp3", target, index);
-	
+
 	if( verbosity > 2 ) printf( "Copy %s to %s\r", title->path, filename );
 	else if( verbosity == 1 )  printf( "Copy Track %03i\r", index );
-	
+
 	in=fopen( title->path, "rb" );
 	if( NULL == in ) fail( "Couldn't open infile ", title->path, errno );
-	
+
 	out=fopen( filename, "wb" );
 	if( NULL == out ) fail( "Couldn't open outfile ", filename, errno );
-	
+
 	size = fread( buffer, sizeof( unsigned char ), BUFFSIZE, in );
 	while( 0 != size ){
 		if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) )
@@ -130,7 +89,7 @@ void copy( struct entry_t *title, const char* target, int index ){
 			activity();
 		}
 	}
-	
+
 	if( verbosity > 0 ){
 		if( verbosity > 2 ) printf( "Copy %s to %s ", title->path, filename );
 		else if( verbosity == 1 )  printf( "Copy Track %03i ", index );
@@ -140,13 +99,13 @@ void copy( struct entry_t *title, const char* target, int index ){
 	free(buffer);
 }
 
-void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 /**
  * copies random tracks into the target dir.
  * list - pointer to the root of the list of tracks.
  * maxlen - maximum size in kB
  * target - target path ending with '/'
  */
+void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 	struct entry_t *base;
 	int i, cnt=1, no=0;
 	long int size=512; /* 512k Overhead - probably needs to be converted to x% */
@@ -154,24 +113,24 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 	if( 0 == maxlen ) size=maxsize;
 	else if ( maxsize < maxlen ) maxlen=maxsize;
 
-  while( list->prev != NULL ){
-  	 list=list->prev;
-  	 cnt++;
-  }
+	while( list->prev != NULL ){
+		list=list->prev;
+		cnt++;
+	}
 	base=list;
 
-  if (verbosity > 2 ) printf("Found %i titles\n", cnt);
+	if (verbosity > 2 ) printf("Found %i titles\n", cnt);
 
 	/* Stepping through every item and tossing it away afterwards */
-  for(i=cnt; i>0; i--){
-  	int j, pos;
-  	list=base;
-  	pos=RANDOM(i);
-  	for(j=1; j<=pos; j++){
-  		list=list->next;
-  	}
-  	
-  	/* Check if the current file is a valid one */
+	for(i=cnt; i>0; i--){
+		int j, pos;
+		list=base;
+		pos=RANDOM(i);
+		for(j=1; j<=pos; j++){
+			list=list->next;
+		}
+
+		/* Check if the current file is a valid one */
 		if ( ( list->length < MAXSIZE ) && ( list->length > MINSIZE ) ) {
 			/* Are we filling the whole device? */
 			if( 0 == maxlen ){
@@ -182,7 +141,7 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 					if( verbosity > 0 ) printf("[%3li%%]\n", 100-((100*size)/maxsize));
 				}				
 			}else{			
-		  	size=size+list->length;
+				size=size+list->length;
 				if ( size < maxlen ) {
 					copy( list, target, no );
 					no++;
@@ -190,7 +149,7 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 				}
 			}
 		}
-		
+
 		if(list->prev != NULL){
 			list->prev->next=list->next;
 		}
@@ -199,13 +158,13 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 		}
 		if(list==base) base=list->next;
 		free(list);
-  }
+	}
 }
 
-void usage( char *progname ){
 /**
  * print out CLI usage
  */
+void usage( char *progname ){
 	printf( "Usage: %s [-s <sourcedir>] [-t <tagetdir>] [-m <megabytes>] [-n] [-l <path to blacklist>] [-v <verbosity>]\n", progname );
 	printf( "-s <path> : set path to directory with music [current dir]\n" );
 	printf( "-t <path> : set path to target directory/device [%s]\n", TARGETDIR );
@@ -216,61 +175,61 @@ void usage( char *progname ){
 	exit(0);
 }
 
-int main( int argc, char **argv ){
 /**
  * CLI interface
  */
+int main( int argc, char **argv ){
 	unsigned long free;
 	int delete=-1;
 	struct entry_t *list;
 	struct blacklist_t *blacklist=NULL;
-	
+
 	char curdir[MAXPATHLEN];
 	char target[MAXPATHLEN];
 	char blname[MAXPATHLEN];
 	char c;
 	int mbsize=0;
-	
+
 	srand((unsigned int)time(NULL));
 	if( NULL == getcwd( curdir, MAXPATHLEN ) )
 		fail( "Could not get current dir!", "", errno );
 	strcpy( target, TARGETDIR );
 
-  while( ( c = getopt( argc, argv, "s:t:m:nb:v:" ) ) != -1 ) {
-  	switch( c ) {
-    	case 's': 
-        strcpy( curdir, optarg );
-        if( ( strlen(curdir) == 2 ) && ( curdir[1] == ':' ) ) 
-        	sprintf( curdir, "%s/", curdir );
-       	else if ( curdir[ strlen( curdir ) -1 ] == '/' )
-       		curdir[ strlen( curdir ) -1 ] = 0;
-      	break;
-      case 't':
-      	strcpy( target, optarg );
-        if ( target[ strlen( target ) -1 ] != '/' )
-        	sprintf( target, "%s/", target );
-      	break;
-      case 'm':
-      	mbsize = atoi( optarg )*1024;
-      	break;
-      case 'b':
-      	strcpy( blname, optarg );
-      	blacklist=loadBlacklist( blname );
-      	break;
-      case 'v':
-      	verbosity = atoi( optarg );
-      	break;
-      case 'n':
-      	delete = 0;
-        break;
-      default:
-      	usage( argv[0] );
-     	break;
-    }
-  }
+	while( ( c = getopt( argc, argv, "s:t:m:nb:v:" ) ) != -1 ) {
+		switch( c ) {
+		case 's':
+			strcpy( curdir, optarg );
+			if( ( strlen(curdir) == 2 ) && ( curdir[1] == ':' ) )
+				sprintf( curdir, "%s/", curdir );
+			else if ( curdir[ strlen( curdir ) -1 ] == '/' )
+				curdir[ strlen( curdir ) -1 ] = 0;
+			break;
+		case 't':
+			strcpy( target, optarg );
+			if ( target[ strlen( target ) -1 ] != '/' )
+				sprintf( target, "%s/", target );
+			break;
+		case 'm':
+			mbsize = atoi( optarg )*1024;
+			break;
+		case 'b':
+			strcpy( blname, optarg );
+			blacklist=loadBlacklist( blname );
+			break;
+		case 'v':
+			verbosity = atoi( optarg );
+			break;
+		case 'n':
+			delete = 0;
+			break;
+		default:
+			usage( argv[0] );
+			break;
+		}
+	}
 
-/* Print info and give chance to bail out */
-  if( verbosity > 0 ){
+	/* Print info and give chance to bail out */
+	if( verbosity > 0 ){
 		printf( "Source: %s\n", curdir );
 		printf( "Target: %s\n", target );
 		if( 0 == mbsize )
@@ -280,22 +239,22 @@ int main( int argc, char **argv ){
 		printf( "Using MP3 files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
 		if( blacklist )
 			printf( "Using %s as blacklist\n", blname );
-    if(!delete)
-      printf( "Keeping existing files\n" );
+		if(!delete)
+			printf( "Keeping existing files\n" );
 		printf( "Press enter to continue or CTRL-C to stop.\n" );
 		fflush( stdout );
 		while(getc(stdin)!=10);
-  }
+	}
 
-/* Delete all files on the target */	
-  if(delete){
+	/* Delete all files on the target */
+	if(delete){
 		if( verbosity > 0 ) printf( "Cleaning %s\n", target ); 
 		clean( target );
 		if( verbosity > 0 ) {
 			printf( "OK\n" );
 			fflush( stdout );
 		}
-  }
+	}
 
 	free=freekb( target );
 	if ( 0 == mbsize ){
@@ -303,27 +262,27 @@ int main( int argc, char **argv ){
 	} else 	if (verbosity > 1) 
 		printf( "Space on device: %liM\n", free/1024 );
 
-/* Create title database */
+	/* Create title database */
 	if( verbosity > 0 ) printf("Scanning %s for mp3 files ..\n", curdir );
 	fflush( stdout );
 	list = recurse( curdir, NULL, blacklist );
 	if( verbosity > 0 ){
-	 	printf( "OK\n");
-	  fflush( stdout );
+		printf( "OK\n");
+		fflush( stdout );
 	}
-  
-/* Copy titles */
+
+	/* Copy titles */
 	if(list == NULL){
-			if( verbosity > 0 ) printf ("No music found in %s\n", curdir );
+		if( verbosity > 0 ) printf ("No music found in %s\n", curdir );
 	}else{
 		writePlaylist( list, mbsize, target );
 	}
 
 	if( verbosity > 0 ){
-	 	printf("Done.\n");
+		printf("Done.\n");
 		fflush( stdout );
 	}
 	if( verbosity > 1 )	while(getc(stdin)!=10);
-	
+
 	return 0;
 }

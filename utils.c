@@ -7,10 +7,10 @@ int rpos=0;
  */
 int compare( const void* op1, const void* op2 )
 {
-    const char **p1 = (const char **) op1;
-    const char **p2 = (const char **) op2;
+	const char **p1 = (const char **) op1;
+	const char **p2 = (const char **) op2;
 
-    return( strcmp( *p1, *p2 ) );
+	return( strcmp( *p1, *p2 ) );
 }
 
 /**
@@ -37,7 +37,7 @@ struct entry_t *sort( struct entry_t *files ){
 		buff=buff->next;
 	}
 
-    qsort( titles, num, sizeof( char * ), compare );
+	qsort( titles, num, sizeof( char * ), compare );
 
 	buff=files;
 	i=0;
@@ -49,7 +49,7 @@ struct entry_t *sort( struct entry_t *files ){
 	for( i=0; i<num; i++) free(titles[i]);
 	free(titles);
 
-    return files;
+	return files;
 }
 
 /**
@@ -76,13 +76,13 @@ void activity(){
 	printf( "%c\r", roller[rpos] ); fflush( stdout );
 }	
 
-void fail( const char* msg, const char* info, int error ){
 /*
  * Print errormessage, errno and quit
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set.
  */
+void fail( const char* msg, const char* info, int error ){
 	if(error == 0 )
 		fprintf(stderr, "\n%s%s\n", msg, info );
 	else
@@ -148,11 +148,11 @@ int isMusic( const char *name ){
 	return 0;
 }
 
-int isValid( const char *name, struct blacklist_t *bl ){
 /**
  * filters out invalid files/dirs like hidden (starting with '.')
  * or names that are in the blacklist.
  */
+int isValid( const char *name, struct blacklist_t *bl ){
 	char loname[MAXPATHLEN];
 	struct blacklist_t *ptr = bl;
 
@@ -168,8 +168,13 @@ int isValid( const char *name, struct blacklist_t *bl ){
 	return -1;
 }
 
+/*
+ * Steps recursively through a directory and collects all music files in a list
+ * curdir: current directory path
+ * files:  the list to store filenames in
+ * bl:     Blacklist of names to ignore
+ */
 struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl ){
-/* */
 	struct entry_t *buff=NULL;
 	char dirbuff[MAXPATHLEN];
 	DIR *directory;
@@ -219,6 +224,9 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t
 	return files;
 }
 
+/*
+ * sets a bit in a long bitlist
+ */
 void setBit( int pos, strval_t val ){
 	int bytepos;
 	unsigned char set=0;

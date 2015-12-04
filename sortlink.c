@@ -2,18 +2,18 @@
 #include <getopt.h>
 
 #ifndef ABS
-	#define ABS(x) ((x<0)?-(x):x)
+#define ABS(x) ((x<0)?-(x):x)
 #endif
 
 // struct entry_t *root=NULL;
 
 void usage( char *progname ){
-/**
- * print out CLI usage
- */
-   printf( "Usage: %s [-s <sourcedir>] [-t targetdir] [-b blacklist]\n", progname );
-   printf( "-s <path> : set path to directory with music [current dir]\n" );
-   exit(0);
+	/**
+	 * print out CLI usage
+	 */
+	printf( "Usage: %s [-s <sourcedir>] [-t targetdir] [-b blacklist]\n", progname );
+	printf( "-s <path> : set path to directory with music [current dir]\n" );
+	exit(0);
 }
 
 int remtitle( struct entry_t *title ){
@@ -32,47 +32,47 @@ int remtitle( struct entry_t *title ){
 	return remove( path ) ;
 }
 
-int main( int argc, char **argv ){
 /**
- * CLI interface
+ * CLI
  */
-int result=0;
-char curdir[MAXPATHLEN];
-char tardir[MAXPATHLEN];
-char c;
-struct entry_t *runner, *buff;
-struct entry_t *root=NULL;
-struct blacklist_t *bl=NULL;
-   
+int main( int argc, char **argv ){
+	int result=0;
+	char curdir[MAXPATHLEN];
+	char tardir[MAXPATHLEN];
+	char c;
+	struct entry_t *runner, *buff;
+	struct entry_t *root=NULL;
+	struct blacklist_t *bl=NULL;
+
 	if( NULL == getcwd( curdir, MAXPATHLEN ) )
 		fail( "Could not get current directory!", "", errno);
 
 	while( ( c = getopt( argc, argv, "s:t:b:" ) ) != -1 ) {
 		switch( c ) {
-               case 'b':
-                  bl=loadBlacklist( optarg );
-               break;
+		case 'b':
+			bl=loadBlacklist( optarg );
+			break;
 		case 's': 
 			strcpy( curdir, optarg );
 			if( ( strlen(curdir) == 2 ) && ( curdir[1] == ':' ) ) 
 				sprintf( curdir, "%s/", curdir );
 			else if ( curdir[ strlen( curdir ) -1 ] == '/' )
 				curdir[ strlen( curdir ) -1 ] = 0;
-		break;
+			break;
 		case 't':
 			strcpy( tardir, optarg );
 			if( ( strlen(tardir) == 2 ) && ( tardir[1] == ':' ) ) 
 				sprintf( tardir, "%s/", tardir );
 			else if ( tardir[ strlen( tardir ) -1 ] == '/' )
 				tardir[ strlen( tardir ) -1 ] = 0;
-		break;
+			break;
 		default:
 			usage( argv[0] );
-		break;
+			break;
 		}
 	}
 
-/* Print info and give chance to bail out */
+	/* Print info and give chance to bail out */
 	printf( "Source: %s\n", curdir );
 	printf( "Target: %s\n", tardir );
 	printf( "Press enter to continue or CTRL-C to stop." );
@@ -80,16 +80,16 @@ struct blacklist_t *bl=NULL;
 	while(getc(stdin)!=10);
 
 	root=recurse( curdir, root , bl );
-  
+
 	printf("Done scanning\n");
 	fflush( stdout );
 
 	if( NULL == root ) fail( "No music found at ", curdir, 0 );
-	
+
 	while(NULL != root->prev) root=root->prev;
 
-fail("Eigentlich gibt es mich gar nicht..", "", 0 );
-	
+	fail("Eigentlich gibt es mich gar nicht..", "", 0 );
+
 #if 0
 	while( NULL != root->next ){
 		runner=root->next;
@@ -103,20 +103,20 @@ fail("Eigentlich gibt es mich gar nicht..", "", 0 );
 					c=getchar();
 					while(c!=10){
 						switch(c){
-							case '1':
-								if( root->prev == NULL )  fail( "Sorry, can't delete first title in list...", "", -1 );
-								else{
-									buff=root->prev;
-									if(remtitle( root )) fail( "Could not delete file!", "", -1 );
-									root=buff;
-								}
+						case '1':
+							if( root->prev == NULL )  fail( "Sorry, can't delete first title in list...", "", -1 );
+							else{
+								buff=root->prev;
+								if(remtitle( root )) fail( "Could not delete file!", "", -1 );
+								root=buff;
+							}
 							break;
-							case '2':
-								buff=runner->prev;
-								if(remtitle( runner )) fail( "Could not delete file!", "", -1 );
-								runner=buff;
-								if( runner == root ) runner=runner->next;
-								if( runner == NULL ) runner=root;
+						case '2':
+							buff=runner->prev;
+							if(remtitle( runner )) fail( "Could not delete file!", "", -1 );
+							runner=buff;
+							if( runner == root ) runner=runner->next;
+							if( runner == NULL ) runner=root;
 							break;
 						}
 						c=getchar();
@@ -133,10 +133,10 @@ fail("Eigentlich gibt es mich gar nicht..", "", 0 );
 	}
 	// free( root );
 #endif
-	
+
 	printf("Done.\n");
 	fflush( stdout );
-	
+
 	return 0;
 }
 

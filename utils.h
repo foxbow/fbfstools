@@ -67,14 +67,10 @@ struct blacklist_t {
  */
 struct entry_t *sort( struct entry_t *files );
 struct entry_t *wipe( struct entry_t *files );
-
-
 struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl );
+
 struct blacklist_t *loadBlacklist( char *path );
 
-
-// extern int rpos = 0;
-// int isValid( const char *name, struct blacklist_t *bl );
 void activity();
 void fail( const char* msg, const char* info, int error );
 int isMusic( const char *name );

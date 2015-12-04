@@ -3,7 +3,7 @@
 #include <getopt.h>
 
 #ifndef ABS
-	#define ABS(x) ((x<0)?-(x):x)
+#define ABS(x) ((x<0)?-(x):x)
 #endif
 
 #define TRIGGER 90
@@ -11,13 +11,15 @@
 
 // struct entry_t *root=NULL;
 
-void usage( char *progname ){
 /**
  * print out CLI usage
  */
-   printf( "Usage: %s [-s <sourcedir>] [-t <trigger>] [-r <range>]\n", progname );
-   printf( "-s <path> : set path to directory with music [current dir]\n" );
-   exit(0);
+void usage( char *progname ){
+	printf( "Usage: %s [-s <sourcedir>] [-t <trigger>] [-r <range>]\n", progname );
+	printf( "-s <path>    : set path to directory with music [current dir]\n" );
+	printf( "-r <range>   : file size range for similarity [%i]\n", RANGE );
+	printf( "-t <trigger> : triggervalue for filename similarity [%i]%%\n", TRIGGER );
+	exit(0);
 }
 
 int remtitle( struct entry_t *title ){
@@ -36,18 +38,18 @@ int remtitle( struct entry_t *title ){
 	return remove( path ) ;
 }
 
-int main( int argc, char **argv ){
 /**
  * CLI interface
  */
-int result=0;
-int trigger=TRIGGER;	
-int range=RANGE;
-char curdir[MAXPATHLEN];
-char c;
-struct entry_t *runner, *buff;
-struct entry_t *root=NULL;
-	
+int main( int argc, char **argv ){
+	int result=0;
+	int trigger=TRIGGER;
+	int range=RANGE;
+	char curdir[MAXPATHLEN];
+	char c;
+	struct entry_t *runner, *buff;
+	struct entry_t *root=NULL;
+
 	if( NULL == getcwd( curdir, MAXPATHLEN ) )
 		fail( "Could not get current directory!", "", errno);
 
@@ -59,20 +61,20 @@ struct entry_t *root=NULL;
 				sprintf( curdir, "%s/", curdir );
 			else if ( curdir[ strlen( curdir ) -1 ] == '/' )
 				curdir[ strlen( curdir ) -1 ] = 0;
-		break;
+			break;
 		case 't':
 			trigger = atoi( optarg );
-		break;
+			break;
 		case 'r':
 			range = atoi( optarg );
-		break;
+			break;
 		default:
 			usage( argv[0] );
-		break;
+			break;
 		}
 	}
 
-/* Print info and give chance to bail out */
+	// Print info and give chance to bail out
 	printf( "Source: %s\n", curdir );
 	printf( "Range: %i KB, Triggervalue: %i\n", range, trigger );
 	printf( "Press enter to continue or CTRL-C to stop." );
@@ -80,14 +82,16 @@ struct entry_t *root=NULL;
 	while(getc(stdin)!=10);
 
 	root=recurse( curdir, root , NULL );
-  
+
 	printf("Done scanning\n");
 	fflush( stdout );
 
 	if( NULL == root ) fail( "No music found at ", curdir, 0 );
-	
+
+	// rewind list
 	while(NULL != root->prev) root=root->prev;
-	
+
+	// check through while there's at least two remaining entries
 	while( NULL != root->next ){
 		runner=root->next;
 		while( NULL != runner ){
@@ -100,20 +104,20 @@ struct entry_t *root=NULL;
 					c=getchar();
 					while(c!=10){
 						switch(c){
-							case '1':
-								if( root->prev == NULL )  fail( "Sorry, can't delete first title in list...", "", -1 );
-								else{
-									buff=root->prev;
-									if(remtitle( root )) fail( "Could not delete file!", "", -1 );
-									root=buff;
-								}
+						case '1':
+							if( root->prev == NULL )  fail( "Sorry, can't delete first title in list...", "", -1 );
+							else{
+								buff=root->prev;
+								if(remtitle( root )) fail( "Could not delete file!", root->name, -1 );
+								root=buff;
+							}
 							break;
-							case '2':
-								buff=runner->prev;
-								if(remtitle( runner )) fail( "Could not delete file!", "", -1 );
-								runner=buff;
-								if( runner == root ) runner=runner->next;
-								if( runner == NULL ) runner=root;
+						case '2':
+							buff=runner->prev;
+							if(remtitle( runner )) fail( "Could not delete file!", runner->name, -1 );
+							runner=buff;
+							if( runner == root ) runner=runner->next;
+							if( runner == NULL ) runner=root;
 							break;
 						}
 						c=getchar();
@@ -129,10 +133,10 @@ struct entry_t *root=NULL;
 		activity();
 	}
 	// free( root );
-	
+
 	printf("Done.\n");
 	fflush( stdout );
-	
+
 	return 0;
 }
 
