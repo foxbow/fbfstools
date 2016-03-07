@@ -78,5 +78,7 @@ int fncmp( const char* str1, const char* str2 );
 int computestrval( const char* str, strval_t strval );
 int fnvcmp( const strval_t val1, const strval_t val2 );
 char *toLower( char *text );
+int dsel( const struct dirent *entry );
+int fsel( const struct dirent *entry );
 
 #endif

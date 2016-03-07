@@ -9,20 +9,6 @@
 #include <sys/stat.h>
 
 /**
- * helperfunction for scandir() - just return unhidden directories
- */
-int dsel( const struct dirent *entry ){
-	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_DIR ) );
-}
-
-/**
- * helperfunction for scandir() - just return unhidden regular files
- */
-int fsel( const struct dirent *entry ){
-	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_REG ) );
-}
-
-/**
  * create the name.for a playlist based on the directory
  * In best case it's the last two directories (Artist - Album.m3u)
  * Or it's just one directory (Album.m3u)

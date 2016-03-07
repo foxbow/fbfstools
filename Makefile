@@ -1,4 +1,4 @@
-EXES=bin/doublet bin/mkm3u bin/fillstick bin/mkplaylists 
+EXES=bin/doublet bin/mkm3u bin/fillstick bin/mkplaylists bin/fixdatenames
 # bin/sortlink 
 
 # Keep object files

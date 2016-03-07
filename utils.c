@@ -3,6 +3,20 @@
 int rpos=0;
 
 /**
+ * helperfunction for scandir() - just return unhidden directories
+ */
+int dsel( const struct dirent *entry ){
+	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_DIR ) );
+}
+
+/**
+ * helperfunction for scandir() - just return unhidden regular files
+ */
+int fsel( const struct dirent *entry ){
+	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_REG ) );
+}
+
+/**
  * helperfunction for sorting entries
  */
 int compare( const void* op1, const void* op2 )
