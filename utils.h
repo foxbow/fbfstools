@@ -24,9 +24,14 @@
 
 #include <time.h>
 
+/* the ABS macro misses here and there */
+#ifndef ABS
+#define ABS(x) ((x<0)?-(x):x)
+#endif
 
-// Represents a string
-typedef unsigned char* strval_t;
+#define HOR '-'
+#define VER '|'
+#define EDG "+"
 
 /* Default values */
 /* Max size of an MP3 file - to avoid full albums */
@@ -40,11 +45,15 @@ typedef unsigned char* strval_t;
 // #define ARRAYLEN 676
 #define ARRAYLEN 85
 #define BITS 680
+// 90% similarity is enough
+#define TRIGGER 90
+// 10k filesize difference
+#define RANGE 10
 
 #ifndef MAXPATHLEN
   #define MAXPATHLEN 256
 #endif
-#define RANDOM(x) rand()%x
+#define RANDOM(x) (rand()%x)
 
 struct entry_t {
 	struct entry_t *prev;
@@ -65,20 +74,23 @@ struct blacklist_t {
 /**
  * entry helper functions
  */
-struct entry_t *sort( struct entry_t *files );
-struct entry_t *wipe( struct entry_t *files );
-struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl );
+// unused?!
+struct entry_t *sortTitles( struct entry_t *files );
+struct entry_t *wipeTitles( struct entry_t *files );
 
-struct blacklist_t *loadBlacklist( char *path );
+struct entry_t *recurse( char *curdir, struct entry_t *files );
+struct entry_t *shuffleTitles( struct entry_t *base, int *cnt );
+struct entry_t *rewindTitles( struct entry_t *base, int *cnt );
+
+int loadBlacklist( char *path );
 
 void activity();
 void fail( const char* msg, const char* info, int error );
-int isMusic( const char *name );
 int fncmp( const char* str1, const char* str2 );
-int computestrval( const char* str, strval_t strval );
-int fnvcmp( const strval_t val1, const strval_t val2 );
 char *toLower( char *text );
-int dsel( const struct dirent *entry );
-int fsel( const struct dirent *entry );
+int getFiles( const char *cd, struct dirent ***filelist );
+int getDirs( const char *cd, struct dirent ***dirlist );
+int isMusic( const char *name );
+char *strip( char *buff, const char *text, const int maxlen );
 
 #endif

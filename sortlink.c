@@ -1,9 +1,6 @@
 #include "utils.h"
 #include <getopt.h>
 
-#ifndef ABS
-#define ABS(x) ((x<0)?-(x):x)
-#endif
 
 // struct entry_t *root=NULL;
 
@@ -42,7 +39,6 @@ int main( int argc, char **argv ){
 	char c;
 	struct entry_t *runner, *buff;
 	struct entry_t *root=NULL;
-	struct blacklist_t *bl=NULL;
 
 	if( NULL == getcwd( curdir, MAXPATHLEN ) )
 		fail( "Could not get current directory!", "", errno);

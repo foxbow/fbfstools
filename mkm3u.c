@@ -11,7 +11,7 @@
 #define MAXPATHLEN 256
 #endif
 
-int verbosity = 1;
+extern int verbosity;
 
 void usage( char *progname ){
 	/**
@@ -29,7 +29,11 @@ void usage( char *progname ){
 void shufflem3u( struct entry_t *list, int cnt,  FILE *fp ) {
 	struct entry_t *base;
 	int i, no=0;
+	struct timeval tv;
 
+	// improve 'randomization'
+	gettimeofday(&tv,NULL);
+	srand(getpid()*tv.tv_sec);
 	base=list;
 
 	if (verbosity > 0 ) printf("Found %i titles\n", cnt);
@@ -68,12 +72,11 @@ int main( int argc, char **argv ){
 	/**
 	 * CLI interface
 	 */
-	struct blacklist_t *blacklist=NULL;
 	struct entry_t *root=NULL;
 
 	char curdir[MAXPATHLEN];
 	char target[MAXPATHLEN];
-	char blname[MAXPATHLEN];
+	char blname[MAXPATHLEN]="";
 	char c;
 	int mix=0;
 	int cnt=1;
@@ -98,7 +101,6 @@ int main( int argc, char **argv ){
 			break;
 		case 'b':
 			strcpy( blname, optarg );
-			blacklist=loadBlacklist( blname );
 			break;
 		case 'v':
 			verbosity = atoi( optarg );
@@ -111,21 +113,28 @@ int main( int argc, char **argv ){
 	if( optind < argc ) strcpy( target, argv[optind] );
 
 	/* Print info and give chance to bail out */
-	printf( "Source: %s\n", curdir );
-	printf( "Target: %s\n", target );
-	printf( "Using MP3/OGG files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
-	if( blacklist )
-		printf( "Using %s as blacklist\n", blname );
-	if( mix )
-		printf( "Shuffling titles\n" );
-	printf( "Press enter to continue or CTRL-C to stop.\n" );
-	fflush( stdout );
-	if (verbosity) while(getchar()!=10);
+	if(verbosity){
+		printf( "Source: %s\n", curdir );
+		printf( "Target: %s\n", target );
+		printf( "Using MP3/OGG files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
+		if( 0 != blname[0] )
+			printf( "Using %s as blacklist\n", blname );
+		if( mix )
+			printf( "Shuffling titles\n" );
+		if( verbosity > 1 )
+			printf( "Press enter to continue or CTRL-C to stop.\n" );
+		fflush( stdout );
+		if( verbosity > 1 )
+			while(getchar()!=10);
+	}
+
+	if( 0 != blname[0] )
+		loadBlacklist( blname );
 
 	pl=fopen( target, "w" );
 	if( NULL == pl ) fail( "Could not open ", target, errno );
 
-	root=recurse( curdir, root, blacklist );
+	root=recurse( curdir, root );
 
 	// rewind to the beginning of the list
 	if( NULL != root ) {
@@ -156,7 +165,7 @@ int main( int argc, char **argv ){
 	}
 
 	fclose( pl );
-	printf("Done.\n");
+	if(verbosity) printf("Done.\n");
 
 	return 0;
 }

@@ -2,12 +2,6 @@
 
 #include <getopt.h>
 
-#ifndef ABS
-#define ABS(x) ((x<0)?-(x):x)
-#endif
-
-#define TRIGGER 90
-#define RANGE 10
 
 // struct entry_t *root=NULL;
 
@@ -17,7 +11,7 @@
 void usage( char *progname ){
 	printf( "Usage: %s [-s <sourcedir>] [-t <trigger>] [-r <range>]\n", progname );
 	printf( "-s <path>    : set path to directory with music [current dir]\n" );
-	printf( "-r <range>   : file size range for similarity [%i]\n", RANGE );
+	printf( "-r <range>   : file size range for similarity [%i]k\n", RANGE );
 	printf( "-t <trigger> : triggervalue for filename similarity [%i]%%\n", TRIGGER );
 	exit(0);
 }
@@ -81,7 +75,7 @@ int main( int argc, char **argv ){
 	fflush( stdout );
 	while(getc(stdin)!=10);
 
-	root=recurse( curdir, root , NULL );
+	root=recurse( curdir, root );
 
 	printf("Done scanning\n");
 	fflush( stdout );
@@ -109,12 +103,14 @@ int main( int argc, char **argv ){
 							else{
 								buff=root->prev;
 								if(remtitle( root )) fail( "Could not delete file!", root->name, -1 );
+								free(root);
 								root=buff;
 							}
 							break;
 						case '2':
 							buff=runner->prev;
 							if(remtitle( runner )) fail( "Could not delete file!", runner->name, -1 );
+							free(runner);
 							runner=buff;
 							if( runner == root ) runner=runner->next;
 							if( runner == NULL ) runner=root;
@@ -128,11 +124,12 @@ int main( int argc, char **argv ){
 		}
 		if( root->next != NULL ){
 			root=root->next;
-			// free( root->prev );
+			free( root->prev );
+			root->prev=NULL;
 		}
 		activity();
 	}
-	// free( root );
+	free( root );
 
 	printf("Done.\n");
 	fflush( stdout );

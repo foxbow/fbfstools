@@ -109,13 +109,11 @@ int traverse( char *cd ){
 		strncat( curdir, "/", MAXPATHLEN-strlen( curdir ) );
 	}
 
-	/**
-	 * collect files and put them into a playlist unless there is already one
-	 */
-	n = scandir( curdir, &namelist, fsel, alphasort);
+	n = getFiles( curdir, &namelist );
 	if (n < 0) {
-		fail("scandir", curdir, errno );
-	} else {
+		fail("getFiles", curdir, errno );
+	}
+	else {
 		// Clean up the namelist
 		for (i = 0; i < n; i++) {
 			strcpy( fullpath, curdir );
@@ -128,7 +126,6 @@ int traverse( char *cd ){
 
 			splitname( fullpath, &parts );
 			if( strlen(parts.date) > 5 ) {
-// dumpparts( parts );
 				strncpy( parts.date, dirbuff, 15 );
 				joinname( parts, newname, MAXPATHLEN );
 				if( !strstr( fullpath, newname) ) {
@@ -145,9 +142,9 @@ int traverse( char *cd ){
 		 * collect directories and run trough them as well
 		 * clean up the namelist in the same go
 		 */
-		n = scandir( curdir, &namelist, dsel, alphasort);
+		n = getDirs( curdir, &namelist );
 		if (n < 0) {
-			fail("scandir", curdir, errno );
+			fail("getDirs", curdir, errno );
 		} else {
 			for (i = 0; i < n; i++) {
 				snprintf( dirbuff, MAXPATHLEN, "%s%s", curdir, namelist[i]->d_name );

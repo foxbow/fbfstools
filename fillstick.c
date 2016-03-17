@@ -1,7 +1,7 @@
 #include "utils.h"
 #include <getopt.h>
 
-int verbosity = 1;
+extern int verbosity;
 
 long freekb(const char * part) {
 #ifdef __MINGW_H
@@ -182,7 +182,6 @@ int main( int argc, char **argv ){
 	unsigned long free;
 	int delete=-1;
 	struct entry_t *list;
-	struct blacklist_t *blacklist=NULL;
 
 	char curdir[MAXPATHLEN];
 	char target[MAXPATHLEN];
@@ -214,7 +213,7 @@ int main( int argc, char **argv ){
 			break;
 		case 'b':
 			strcpy( blname, optarg );
-			blacklist=loadBlacklist( blname );
+			loadBlacklist( blname );
 			break;
 		case 'v':
 			verbosity = atoi( optarg );
@@ -237,7 +236,7 @@ int main( int argc, char **argv ){
 		else
 			printf( "Size  : %i MB\n", mbsize/1024 );
 		printf( "Using MP3 files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
-		if( blacklist )
+		if( 0 != blname[0] )
 			printf( "Using %s as blacklist\n", blname );
 		if(!delete)
 			printf( "Keeping existing files\n" );
@@ -265,7 +264,7 @@ int main( int argc, char **argv ){
 	/* Create title database */
 	if( verbosity > 0 ) printf("Scanning %s for mp3 files ..\n", curdir );
 	fflush( stdout );
-	list = recurse( curdir, NULL, blacklist );
+	list = recurse( curdir, NULL );
 	if( verbosity > 0 ){
 		printf( "OK\n");
 		fflush( stdout );
