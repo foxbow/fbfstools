@@ -417,10 +417,12 @@ int main(int argc, char **argv) {
 						printf("MPG123 : %s", line);
 						break;
 					} // case()
+
 					if (redraw) {
 						drawframe(station, titel);
 					}
 				} // fgets() > 0
+				reader = fdopen(p_status[0], "r");
 				drawframe(station, titel);
 			} // while(running)
 			kill(pid, SIGTERM);

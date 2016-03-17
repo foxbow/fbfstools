@@ -296,18 +296,19 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 			// add entry to list
 			runner->next=NULL;
 			runner->prev=end;
+			if( NULL != end ) {
+				end->next=runner;
+			}
+			end=runner;
+
 			if( NULL == base ) {
 				base=runner;
-				end=base;
-			}
-			else {
-				end=runner;
 			}
 		}
 	}
 
-	base=list;
-	return base;
+//	base=list;
+	return rewindTitles(end, cnt);
 }
 
 /*
