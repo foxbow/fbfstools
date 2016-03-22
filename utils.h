@@ -59,6 +59,7 @@ struct entry_t {
 	struct entry_t *prev;
 	char path[MAXPATHLEN];
 	char name[MAXPATHLEN];
+	char title[MAXPATHLEN];
 	long int length;
 	struct entry_t *next;
 };
@@ -84,6 +85,7 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt );
 
 int loadBlacklist( char *path );
 
+void setTitle(const char* title);
 void activity();
 void fail( const char* msg, const char* info, int error );
 int fncmp( const char* str1, const char* str2 );

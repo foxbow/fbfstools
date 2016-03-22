@@ -4,19 +4,7 @@
 #include <signal.h>
 #include <ncurses.h>
 
-/* Default values */
-/* Max size of an MP3 file - to avoid full albums */
-#define MAXSIZE 15*1024
-/* Min size - to avoid fillers */
-#define MINSIZE 1024
-
 #define BUFLEN 256
-
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 256
-#endif
-
-#define TITLES 75
 
 extern int verbosity;
 volatile int running=1;
@@ -72,24 +60,14 @@ void drawbox(int r0, int c0, int r1, int c1) {
 }
 
 /**
- * Some ANSI code magic to set the terminal title
- **/
-void setTitle(const char* title) {
-	char buff[BUFLEN];
-	strcpy(buff, "\033]2;");
-	strcat(buff, title);
-	strcat(buff, "\007\000");
-	fputs(buff, stdout);
-	fflush(stdout);
-}
-
-/**
  * Draw the application frame
  */
-void drawframe(char *station, char *titel[]) {
+void drawframe(char *station, struct entry_t *current, char *status ) {
 	int i, maxlen, pos, rows;
 	int row, col;
+	int middle;
 	char buff[BUFLEN];
+	struct entry_t *runner;
 
 	refresh();
 	getmaxyx(stdscr, row, col);
@@ -98,37 +76,69 @@ void drawframe(char *station, char *titel[]) {
 	if ((row > 6) && (col > 19)) {
 		// main frame
 		drawbox(1, 1, row - 2, col - 2);
-		// separator
-		dhline(3, 1, col - 3);
 		// outer frame
 		mvhline(row - 1, 1, ' ', col);
 		mvvline(1, col - 1, ' ', row);
 
 		maxlen = col - 6;
 
-		// Set the stream title
+		middle=row/2;
+
+		// title
+		dhline( middle-1, 1, col-3 );
 		strncpy(buff, station, maxlen);
 		pos = (col - (strlen(buff) + 2)) / 2;
-		mvprintw(1, pos, " %s ", buff);
+		mvprintw(middle-1, pos, " %s ", buff);
 
 		// Set the current playing title
-		strncpy(buff, titel[0], maxlen);
-		buff[maxlen] = 0;
-		pos = (col - strlen(buff)) / 2;
-		mvhline(2, 2, ' ', maxlen + 2);
-		mvprintw(2, pos, "%s", buff);
-
+		if( NULL != current ) {
+			strip(buff, current->title, maxlen);
+		}
+		else {
+			strcpy( buff, "---" );
+		}
 		setTitle(buff);
 
-		// Set the history
-		rows = row - 5;
-		if (rows > TITLES)
-			rows = TITLES;
-		for (i = 1; i < rows; i++) {
-			strncpy(buff, titel[i], maxlen);
-			buff[maxlen] = 0;
-			mvhline(i + 3, 2, ' ', maxlen + 2);
-			mvprintw(i + 3, 3, "%s", buff);
+//		buff[maxlen] = 0;
+		pos = (col - strlen(buff)) / 2;
+		mvhline(middle, 2, ' ', maxlen + 2);
+		mvprintw(middle, pos, "%s", buff);
+
+		dhline( middle+1, 1, col-3 );
+
+		// print the status
+		strncpy(buff, status, maxlen);
+		pos = (col - (strlen(buff) + 2)) / 2;
+		mvprintw( row - 2, pos, " %s ", buff);
+
+		// song list
+		if( NULL != current ) {
+			// previous songs
+			runner=current->prev;
+			for( i=middle-2; i>1; i-- ){
+				if( NULL != runner ) {
+					strip( buff, runner->title, maxlen );
+					runner=runner->prev;
+				}
+				else {
+					strcpy( buff, "---" );
+				}
+				mvhline( i, 2, ' ', maxlen + 2);
+				mvprintw( i, 3, "%s", buff);
+			}
+			// past songs
+			runner=current->next;
+			for( i=middle+2; i<row-2; i++ ){
+				if( NULL != runner ) {
+					strip( buff, runner->title, maxlen );
+					runner=runner->next;
+				}
+				else {
+					strcpy( buff, "---" );
+				}
+				mvhline( i, 2, ' ', maxlen + 2);
+				mvprintw( i, 3, "%s", buff);
+			}
 		}
 	}
 	refresh();
@@ -147,6 +157,49 @@ void sendplay( int fd, struct entry_t *song ) {
 	write( fd, line, BUFLEN );
 }
 
+/**
+ * reads from the fd into the line buffer until either a CR
+ * comes or the fd stops sending characters.
+ * returns number of read bytes or -1 on overflow.
+ */
+int readline( char *line, size_t len, int fd ){
+	int cnt=0;
+	char c;
+
+	while ( 0 != read(fd, &c, 1 ) ) {
+		if( cnt < len ) {
+			line[cnt]=c;
+			cnt++;
+			if( '\n' == c ) {
+				if( cnt < len ) {
+					line[cnt]=0;
+					cnt++;
+					return cnt;
+				} else {
+					return -1;
+				}
+			}
+			// avoid reading behind string end
+			if( 0 == c ) {
+				return cnt;
+			}
+		} else {
+			return -1;
+		}
+	}
+
+	// avoid returning unterminated strings.
+	if( cnt < len ) {
+		line[cnt]=0;
+		cnt++;
+		return cnt;
+	} else {
+		return -1;
+	}
+
+	return cnt;
+}
+
 int main(int argc, char **argv) {
 	/**
 	 * CLI interface
@@ -159,9 +212,9 @@ int main(int argc, char **argv) {
 
 	char line[BUFLEN];
 	char song[BUFLEN] = "";
+	char status[BUFLEN] = "INIT";
 	char tbuf[BUFLEN];
 	char station[BUFLEN] = "mixplay "VERSION;
-	char *titel[TITLES];
 	char curdir[MAXPATHLEN];
 	char target[MAXPATHLEN];
 	char blname[MAXPATHLEN] = "";
@@ -170,12 +223,13 @@ int main(int argc, char **argv) {
 	int mix = 0;
 	int i, cnt = 1;
 	fd_set fds;
+	struct timeval to;
 	pid_t pid;
 	int redraw;
 	int repeat = 0;
-	int cmd;
 
-	FILE *reader;
+	int order=1;
+
 	verbosity = 0;
 
 	if (NULL == getcwd(curdir, MAXPATHLEN))
@@ -282,15 +336,8 @@ int main(int argc, char **argv) {
 		}
 
 		else {
-			// Initialize title backlog
-			for (i = 0; i < TITLES; i++) {
-				titel[i] = (char *) calloc(BUFLEN, sizeof(char));
-				strcpy(titel[i], "---");
-			}
-
 			close(p_command[0]);
 			close(p_status[1]);
-			reader = fdopen(p_status[0], "r");
 
 			// Start curses mode
 			initscr();
@@ -298,20 +345,64 @@ int main(int argc, char **argv) {
 			cbreak();
 			keypad(stdscr, TRUE);
 			noecho();
-			drawframe(station, titel);
+			drawframe(station, NULL, status );
 
 			while (running) {
-				while ((NULL != fgets(line, 512, reader))) {
-					redraw = 0;
+				FD_ZERO( &fds );
+				FD_SET( fileno(stdin), &fds );
+				FD_SET( p_status[0], &fds );
+				to.tv_sec=1;
+				to.tv_usec=0; // 1/4 sec
+				i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
+				redraw=0;
+
+				// Interpret keypresses
+				if( FD_ISSET( fileno(stdin), &fds ) ) {
+					switch( getch() ){
+					case ' ':
+						write( p_command[1], "PAUSE\n", 7 );
+					break;
+					case 's':
+						order=0;
+						write( p_command[1], "STOP\n", 6 );
+					break;
+					case KEY_DOWN:
+					case 'n':
+						order=1;
+						write( p_command[1], "STOP\n", 6 );
+					break;
+					case KEY_UP:
+					case 'p':
+						order=-1;
+						write( p_command[1], "STOP\n", 6 );
+					break;
+					case 'q':
+						write( p_command[1], "QUIT\n", 6 );
+						running=0;
+					break;
+					case KEY_LEFT:
+						write( p_command[1], "JUMP -64\n", 10 );
+					break;
+					case KEY_RIGHT:
+						write( p_command[1], "JUMP +64\n", 10 );
+					break;
+					case 'r':
+						write( p_command[1], "JUMP 0\n", 8 );
+					break;
+					}
+				}
+
+				// Interpret mpg123 output
+				if( FD_ISSET( p_status[0], &fds ) ) {
+					readline(line, 512, p_status[0]);
+					redraw = 1;
 					switch (line[1]) {
-					case 'R':
-						/* @R MPG123 <a>
-						 * Startup version message
-						 */
+					int cmd, in, rem, q;
+					case 'R': // startup
 						current = root;
 						sendplay(p_command[1], current);
 						break;
-					case 'I':
+					case 'I': // ID3 info
 						/* @I ID3.2.year:2016
 						 * @I ID3.2.comment:http://www.faderhead.com
 						 * @I ID3.2.genre:EBM / Electronic / Electro
@@ -326,20 +417,19 @@ int main(int argc, char **argv) {
 						}
 						// line starts with 'Artist:' this means we had a 'Title:' line before
 						else if (NULL != (b = strstr(line, "artist:"))) {
-							for (i = TITLES - 1; i > 0; i--)
-								strcpy(titel[i], titel[i - 1]);
-							strip(titel[0], b + 7, BUFLEN);
-							strcat(titel[0], " - ");
-							strip(titel[0] + strlen(titel[0]), tbuf,
-									BUFLEN - strlen(titel[0]));
+							strip(current->title, b + 7, BUFLEN);
+							strcat(current->title, " - ");
+							strip(current->title + strlen(current->title), tbuf,
+									BUFLEN - strlen(current->title));
 						}
 						// Album
 						else if (NULL != (b = strstr(line, "album:"))) {
 							strip(station, b + 6, BUFLEN);
-							redraw = 1;
 						}
-
 						break;
+					case 'J': // JUMP reply
+						// Ignored
+					break;
 					case 'S':
 						/* @S <a> <b> <c> <d> <e> <f> <g> <h> <i> <j> <k> <l>
 						 * Status message after loading a song (stream info)
@@ -357,7 +447,6 @@ int main(int argc, char **argv) {
 						 * l = extension (int)
 						 */
 						// ignore for now
-						// printf("%s",line);
 						break;
 					case 'F':
 						/* @F <a> <b> <c> <d>
@@ -367,63 +456,81 @@ int main(int argc, char **argv) {
 						 * c = seconds (float)
 						 * d = seconds left (float)
 						 */
+						b=strrchr( line, ' ' );
+						rem=atoi(b);
+						*b=0;
+						b=strrchr( line, ' ' );
+						in=atoi(b);
+						q=in/((rem+in)/30);
+						memset( tbuf, 0, BUFLEN );
+						for( i=0; i<30; i++ ) {
+							if( i < q ) tbuf[i]='=';
+							if( i == q ) tbuf[i]='>';
+							else tbuf[i]=' ';
+						}
+						sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );
+						// sprintf(status, "%i:%02i PLAYING %i:%02i", in/60, in%60, rem/60, rem%60 );
 						break;
-					case 'P':
-						/* @P <a> <b>
-						 * Playing status
-						 * a = 0: playing stopped
-						 * b = EOF: stopped, because end of song reached
-						 * a = 1: playing paused
-						 * a = 2: playing unpaused
-						 */
+					case 'P': // Player status
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							if (current->next == NULL) {
-								if (repeat) {
-									current = root;
-									if (mix)
-										current = shuffleTitles(root, &cnt);
+							if( 0 == order ) {
+								strcpy( status, "STOP" );
+								break;
+							}
+							if( 1 == order ) {
+								if (current->next == NULL) {
+									if (repeat) {
+										current = root;
+										if (mix)
+											current = shuffleTitles(root, &cnt);
+									} else {
+										strcpy( status, "STOP" );
+										break;
+									}
 								} else {
-									// puts("STOP");
+									current = current->next;
+								}
+							}
+							else {
+								if (current->prev != NULL) {
+									current=current->prev;
+								} else {
+									strcpy( status, "STOP" );
 									break;
 								}
-							} else {
-								current = current->next;
 							}
 							sendplay(p_command[1], current);
 							break;
 						case 1:
-							printf("PAUSE\n");
+							strcpy( status, "PAUSE" );
 							break;
 						case 2:
-							printf("PLAYING\n");
+							strcpy( status, "PLAYING" );
 							break;
 						default:
-							printf("Unknown command %i!\n", cmd);
+							sprintf( status, "Unknown status %i!", cmd);
+							drawframe( station, current, status );
+							sleep(1);
 						}
 						break;
 					case 'E':
-						/* @E <a>
-						 * An error occured
-						 * Errors may be also reported by mpg123 through
-						 * stderr (without @E)
-						 * a = error message (string)
-						 */
-						printf("ERROR: %s", &line[3]);
-						running = 0;
+						sprintf( status, "ERROR: %s", line);
+						drawframe( station, current, status );
+						sleep(1);
+						// These are rarely deadly
+						// running=0;
 						break;
 					default:
-						printf("MPG123 : %s", line);
+						sprintf( status, "MPG123 : %s", line);
+						drawframe( station, current, status );
+						sleep(1);
+						//running=0;
 						break;
 					} // case()
-
-					if (redraw) {
-						drawframe(station, titel);
-					}
 				} // fgets() > 0
-				reader = fdopen(p_status[0], "r");
-				drawframe(station, titel);
+				if( redraw ) drawframe(station, current, status );
 			} // while(running)
 			kill(pid, SIGTERM);
 			endwin();

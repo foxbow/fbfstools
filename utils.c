@@ -8,6 +8,18 @@ int verbosity=1;
 struct blacklist_t *blacklist=NULL;
 
 /**
+ * Some ANSI code magic to set the terminal title
+ **/
+void setTitle(const char* title) {
+	char buff[128];
+	strncpy(buff, "\033]2;", 128 );
+	strncat(buff, title, 128 );
+	strncat(buff, "\007\000", 128 );
+	fputs(buff, stdout);
+	fflush(stdout);
+}
+
+/**
  * Strip spaces and special chars from the beginning and the end
  * of 'text', truncate it to 'maxlen' and store the result in
  * 'buff'.
@@ -351,6 +363,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 		if(files != NULL)files->next=buff;
 
 		strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
+		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
 		strncpy( buff->path, curdir, MAXPATHLEN );
 		buff->length=ftell( file )/1024;
 		files=buff;
