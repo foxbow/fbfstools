@@ -14,11 +14,8 @@ clean:
 	rm -f *.o
 	rm -f $(EXES)
 
-bin/mixplay: utils.o mixplay.o
-	gcc $(CCFLAGS) $^ -o $@ -lncurses
-
 bin/%: utils.o %.o
-	gcc $(CCFLAGS) $^ -o $@
+	gcc $(CCFLAGS) $^ -o $@ -lncurses
 
 %.o: %.c utils.h
 	gcc $(CCFLAGS) -c $<

@@ -15,42 +15,11 @@
  * Or it's just playlist.m3u
  */
 char *genPLName( char *plname, const char *cd ){
-	char *p0, *p1;
-	char curdir[MAXPATHLEN];
-
-	// Create working copy of the path and cut off trailing /
-	strncpy( curdir, cd, MAXPATHLEN );
-	curdir[strlen(curdir)-1]=0;
-
-	// Start with the current path
-	strncpy( plname, cd, MAXPATHLEN );
-
-	p1=strrchr( curdir, '/' );
-	if( p1 == NULL ) {
-		// No updir found, so it's the generic name
-		strncat( plname, "playlist", MAXPATHLEN-strlen( plname ) );
-	} else {
-		// cut off the last dir
-		*p1=0;
-		p1++;
-		p0=strrchr( curdir, '/' );
-		if( ( NULL == p0 ) && ( strlen(curdir) < 2 ) ) {
-			// No second updir found, so it's just the last dir name
-			strncat( plname, p1, MAXPATHLEN-strlen( plname ) );
-		} else {
-			if( NULL == p0 ) {
-				p0 = curdir;
-			} else {
-				*p0=0;
-				p0++;
-			}
-			strncat( plname, p0, MAXPATHLEN-strlen( plname ) );
-			strncat( plname, " - ", MAXPATHLEN-strlen( plname ) );
-			strncat( plname, p1, MAXPATHLEN-strlen( plname ) );
-		}
+	genPathName( plname, MAXPATHLEN, cd );
+	if( strlen(plname) < 2 ) {
+		strcpy( plname, "playlist" );
 	}
 	strncat( plname, ".m3u", MAXPATHLEN-strlen( plname ) );
-
 	return plname;
 }
 

@@ -21,43 +21,6 @@ void usage( char *progname ){
 	exit(0);
 }
 
-/**
- * Print an error message, print the log and exit
- */
-int cfail(const char *msg) {
-	endwin();
-	printf("ERROR: %s", msg);
-	running = 0;
-	return EXIT_FAILURE;
-}
-
-/**
- * Draw a horizontal line
- */
-void dhline(int r, int c, int len) {
-	mvhline(r, c + 1, HOR, len - 1);
-	mvprintw(r, c, EDG );
-	mvprintw(r, c + len, EDG );
-}
-
-/**
- * Draw a vertical line
- */
-void dvline(int r, int c, int len) {
-	mvhline(r + 1, c, VER, len - 2);
-	mvprintw(r, c, EDG );
-	mvprintw(r + len, c, EDG );
-}
-
-/**
- * draw a box
- */
-void drawbox(int r0, int c0, int r1, int c1) {
-	dhline(r0, c0, c1 - c0);
-	dhline(r1, c0, c1 - c0);
-	mvvline(r0 + 1, c0, VER, r1 - r0 - 1);
-	mvvline(r0 + 1, c1, VER, r1 - r0 - 1);
-}
 
 /**
  * Draw the application frame
@@ -92,7 +55,7 @@ void drawframe(char *station, struct entry_t *current, char *status ) {
 
 		// Set the current playing title
 		if( NULL != current ) {
-			strip(buff, current->title, maxlen);
+			strip(buff, current->display, maxlen);
 		}
 		else {
 			strcpy( buff, "---" );
@@ -117,7 +80,7 @@ void drawframe(char *station, struct entry_t *current, char *status ) {
 			runner=current->prev;
 			for( i=middle-2; i>1; i-- ){
 				if( NULL != runner ) {
-					strip( buff, runner->title, maxlen );
+					strip( buff, runner->display, maxlen );
 					runner=runner->prev;
 				}
 				else {
@@ -130,7 +93,7 @@ void drawframe(char *station, struct entry_t *current, char *status ) {
 			runner=current->next;
 			for( i=middle+2; i<row-2; i++ ){
 				if( NULL != runner ) {
-					strip( buff, runner->title, maxlen );
+					strip( buff, runner->display, maxlen );
 					runner=runner->next;
 				}
 				else {
@@ -155,49 +118,6 @@ void sendplay( int fd, struct entry_t *song ) {
 	strncat( line, song->name, BUFLEN );
 	strncat( line, "\n", BUFLEN );
 	write( fd, line, BUFLEN );
-}
-
-/**
- * reads from the fd into the line buffer until either a CR
- * comes or the fd stops sending characters.
- * returns number of read bytes or -1 on overflow.
- */
-int readline( char *line, size_t len, int fd ){
-	int cnt=0;
-	char c;
-
-	while ( 0 != read(fd, &c, 1 ) ) {
-		if( cnt < len ) {
-			line[cnt]=c;
-			cnt++;
-			if( '\n' == c ) {
-				if( cnt < len ) {
-					line[cnt]=0;
-					cnt++;
-					return cnt;
-				} else {
-					return -1;
-				}
-			}
-			// avoid reading behind string end
-			if( 0 == c ) {
-				return cnt;
-			}
-		} else {
-			return -1;
-		}
-	}
-
-	// avoid returning unterminated strings.
-	if( cnt < len ) {
-		line[cnt]=0;
-		cnt++;
-		return cnt;
-	} else {
-		return -1;
-	}
-
-	return cnt;
 }
 
 int main(int argc, char **argv) {
@@ -304,19 +224,6 @@ int main(int argc, char **argv) {
 		}
 		// child process
 		if (0 == pid) {
-			/* COMMAND CODES
-			 * -------------
-			 * Command codes may be abbreviated by its first character.
-			 * QUIT - Stop playing and quit player
-			 * LOAD <a> - Load and play a file/URL.
-			 * STOP - Stop playing (without quitting the player)
-			 * PAUSE - Pause/unpause playing
-			 * JUMP [+|-]<a> - Skip <a> frames:
-			 * +32	forward 32 frames
-			 * -32	rewind 32 frames
-			 * 0	jump to the beginning
-			 * 1024	jump to frame 1024
-			 */
 			if (dup2(p_command[0], STDIN_FILENO) != STDIN_FILENO) {
 				fail("Could not dup stdin for player", "", errno);
 			}
@@ -355,7 +262,6 @@ int main(int argc, char **argv) {
 				to.tv_usec=0; // 1/4 sec
 				i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 				redraw=0;
-
 				// Interpret keypresses
 				if( FD_ISSET( fileno(stdin), &fds ) ) {
 					switch( getch() ){
@@ -417,10 +323,10 @@ int main(int argc, char **argv) {
 						}
 						// line starts with 'Artist:' this means we had a 'Title:' line before
 						else if (NULL != (b = strstr(line, "artist:"))) {
-							strip(current->title, b + 7, BUFLEN);
-							strcat(current->title, " - ");
-							strip(current->title + strlen(current->title), tbuf,
-									BUFLEN - strlen(current->title));
+							strip(current->display, b + 7, BUFLEN);
+							strcat(current->display, " - ");
+							strip(current->display + strlen(current->display), tbuf,
+									BUFLEN - strlen(current->display));
 						}
 						// Album
 						else if (NULL != (b = strstr(line, "album:"))) {
@@ -465,7 +371,7 @@ int main(int argc, char **argv) {
 						memset( tbuf, 0, BUFLEN );
 						for( i=0; i<30; i++ ) {
 							if( i < q ) tbuf[i]='=';
-							if( i == q ) tbuf[i]='>';
+							else if( i == q ) tbuf[i]='>';
 							else tbuf[i]=' ';
 						}
 						sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );

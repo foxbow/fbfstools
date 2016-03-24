@@ -59,7 +59,7 @@ struct entry_t {
 	struct entry_t *prev;
 	char path[MAXPATHLEN];
 	char name[MAXPATHLEN];
-	char title[MAXPATHLEN];
+	char display[MAXPATHLEN];
 	long int length;
 	struct entry_t *next;
 };
@@ -73,11 +73,24 @@ struct blacklist_t {
 };
 
 /**
+ * curses helper functions
+ */
+void cfail(const char *msg, const char *info, int error );
+void dhline(int r, int c, int len);
+void dvline(int r, int c, int len);
+void drawbox(int r0, int c0, int r1, int c1);
+/**
+ * reads from the fd into the line buffer until either a CR
+ * comes or the fd stops sending characters.
+ * returns number of read bytes or -1 on overflow.
+ */
+int readline( char *line, size_t len, int fd );
+/**
  * entry helper functions
  */
 // unused?!
-struct entry_t *sortTitles( struct entry_t *files );
-struct entry_t *wipeTitles( struct entry_t *files );
+// struct entry_t *sortTitles( struct entry_t *files );
+// struct entry_t *wipeTitles( struct entry_t *files );
 
 struct entry_t *recurse( char *curdir, struct entry_t *files );
 struct entry_t *shuffleTitles( struct entry_t *base, int *cnt );
@@ -94,5 +107,6 @@ int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 int isMusic( const char *name );
 char *strip( char *buff, const char *text, const int maxlen );
+char *genPathName( char *name, char *cd, size_t len );
 
 #endif

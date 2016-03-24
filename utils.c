@@ -45,6 +45,177 @@ char *strip( char *buff, const char *text, const int maxlen ) {
 	return buff;
 }
 
+char *genPathName( char *name, char *cd, size_t len ){
+	char *p0, *p1, *p2;
+	char curdir[MAXPATHLEN];
+	int pl;
+
+	// Create working copy of the path and cut off trailing /
+	strncpy( curdir, cd, MAXPATHLEN );
+	if( '/' == curdir[strlen(curdir)] ) {
+		curdir[strlen(curdir)-1]=0;
+		pl=1; // generating playlist name
+	}
+
+	// cut off .mp3
+	p0 = strstr( curdir, ".mp3" );
+	if( NULL != p0 ) {
+		*p0=0;
+		pl=0; // guessing artist/title combination
+	}
+
+	strcpy( name, "" );
+
+	p0=strrchr( curdir, '/' );
+	if( NULL != p0  ) {
+		// cut off the last part
+		*p0=0;
+		p0++;
+
+		p1=strrchr( curdir, '/' );
+		if( ( NULL == p1 ) && ( strlen(curdir) < 2 ) ) {
+			// No second updir found, so it's just the last dir name
+			strncat( name, p0, len  );
+		} else {
+			if( NULL == p1 ) {
+				p1 = curdir;
+			} else {
+				*p1=0;
+				p1++;
+			}
+			if( pl ) {
+				strncat( name, p1, len );
+				strncat( name, " - ", len );
+				strncat( name, p0, len );
+			}
+			else {
+				p2=strrchr( curdir, '/' );
+				if( NULL == p2 ) {
+					p2=p1;
+				}
+				else {
+					*p2=0;
+					p2++;
+				}
+				pl=0;
+				if( isdigit(p0[0]) ) {
+					pl=1;
+					if( isdigit(p0[1]) ) {
+						pl=2;
+					}
+				}
+				if( ( pl > 0 ) && ( ' ' == p0[pl] ) ) {
+					p0=p0+pl+3;
+				}
+				strncat( name, p2, len );
+				strncat( name, " - ", len );
+				strncat( name, p0, len );
+			}
+		}
+	}
+
+	return name;
+}
+
+/*
+ * Print errormessage, errno and quit
+ * msg - Message to print
+ * info - second part of the massage, for instance a variable
+ * error - errno that was set.
+ */
+void fail( const char* msg, const char* info, int error ){
+	if(error == 0 )
+		fprintf(stderr, "\n%s%s\n", msg, info );
+	else
+		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, error, strerror( error ) );
+	fprintf(stderr, "Press [ENTER]\n" );
+	fflush( stdout );
+	fflush( stderr );
+	while(getc(stdin)!=10);
+	if (error != 0 ) exit(error);
+	return;
+}
+
+/**
+ * end screen session, print an error message, errno and quit
+ */
+void cfail(const char *msg, const char *info, int error ) {
+	endwin();
+	fail( msg, info, error );
+}
+
+
+/**
+ * Draw a horizontal line
+ */
+void dhline(int r, int c, int len) {
+	mvhline(r, c + 1, HOR, len - 1);
+	mvprintw(r, c, EDG );
+	mvprintw(r, c + len, EDG );
+}
+
+/**
+ * Draw a vertical line
+ */
+void dvline(int r, int c, int len) {
+	mvhline(r + 1, c, VER, len - 2);
+	mvprintw(r, c, EDG );
+	mvprintw(r + len, c, EDG );
+}
+
+/**
+ * draw a box
+ */
+void drawbox(int r0, int c0, int r1, int c1) {
+	dhline(r0, c0, c1 - c0);
+	dhline(r1, c0, c1 - c0);
+	mvvline(r0 + 1, c0, VER, r1 - r0 - 1);
+	mvvline(r0 + 1, c1, VER, r1 - r0 - 1);
+}
+
+/**
+ * reads from the fd into the line buffer until either a CR
+ * comes or the fd stops sending characters.
+ * returns number of read bytes or -1 on overflow.
+ */
+int readline( char *line, size_t len, int fd ){
+	int cnt=0;
+	char c;
+
+	while ( 0 != read(fd, &c, 1 ) ) {
+		if( cnt < len ) {
+			line[cnt]=c;
+			cnt++;
+			if( '\n' == c ) {
+				if( cnt < len ) {
+					line[cnt]=0;
+					cnt++;
+					return cnt;
+				} else {
+					return -1;
+				}
+			}
+			// avoid reading behind string end
+			if( 0 == c ) {
+				return cnt;
+			}
+		} else {
+			return -1;
+		}
+	}
+
+	// avoid returning unterminated strings.
+	if( cnt < len ) {
+		line[cnt]=0;
+		cnt++;
+		return cnt;
+	} else {
+		return -1;
+	}
+
+	return cnt;
+}
+
 /**
  * Check if a file is a music file
  */
@@ -126,7 +297,7 @@ static int compare( const void* op1, const void* op2 )
 /**
  * Sort a list of entries
  */
-struct entry_t *sortTitles( struct entry_t *files ){
+static struct entry_t *sortTitles( struct entry_t *files ){
 	char **titles;
 	int num=0;
 	int i;
@@ -165,7 +336,7 @@ struct entry_t *sortTitles( struct entry_t *files ){
 /**
  * clean up a list of entries
  */
-struct entry_t *wipeTitles( struct entry_t *files ){
+static struct entry_t *wipeTitles( struct entry_t *files ){
 	struct entry_t *buff=files;
 	while( buff != NULL ){
 		files=buff;
@@ -185,25 +356,6 @@ void activity(){
 	rpos=(rpos+1)%4;			
 	printf( "%c\r", roller[rpos] ); fflush( stdout );
 }	
-
-/*
- * Print errormessage, errno and quit
- * msg - Message to print
- * info - second part of the massage, for instance a variable
- * error - errno that was set.
- */
-void fail( const char* msg, const char* info, int error ){
-	if(error == 0 )
-		fprintf(stderr, "\n%s%s\n", msg, info );
-	else
-		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, error, strerror( error ) );
-	fprintf(stderr, "Press [ENTER]\n" );
-	fflush( stdout );
-	fflush( stderr );
-	while(getc(stdin)!=10);
-	if (error != 0 ) exit(error);
-	return;
-}
 
 /*
  * Inplace conversion of a string to lowercase
@@ -363,7 +515,8 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 		if(files != NULL)files->next=buff;
 
 		strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
-		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
+		genPathName( buff->display, dirbuff, MAXPATHLEN );
+//		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
 		strncpy( buff->path, curdir, MAXPATHLEN );
 		buff->length=ftell( file )/1024;
 		files=buff;
