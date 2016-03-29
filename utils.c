@@ -24,7 +24,7 @@ void setTitle(const char* title) {
  * of 'text', truncate it to 'maxlen' and store the result in
  * 'buff'.
 **/
-char *strip( char *buff, const char *text, const int maxlen ) {
+char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
 	int pos=0;
 
@@ -45,7 +45,11 @@ char *strip( char *buff, const char *text, const int maxlen ) {
 	return buff;
 }
 
-char *genPathName( char *name, char *cd, size_t len ){
+/**
+ * takes a directory and tries to guess info from the structure
+ * Either it's Artist/Album for directories or just the Artist from an mp3
+ */
+char *genPathName( char *name, const char *cd, const size_t len ){
 	char *p0, *p1, *p2;
 	char curdir[MAXPATHLEN];
 	int pl;
@@ -284,77 +288,27 @@ int getDirs( const char *cd, struct dirent ***dirlist ){
 }
 
 /**
- * helperfunction for sorting entries
- */
-static int compare( const void* op1, const void* op2 )
-{
-	const char **p1 = (const char **) op1;
-	const char **p2 = (const char **) op2;
-
-	return( strcmp( *p1, *p2 ) );
-}
-
-/**
- * Sort a list of entries
- */
-static struct entry_t *sortTitles( struct entry_t *files ){
-	char **titles;
-	int num=0;
-	int i;
-	struct entry_t *buff=files;
-
-	while( buff != NULL ) {
-		num++;
-		buff=buff->next;
-	}
-
-	titles=(char **)calloc( num, sizeof(char *) );
-	for( i=0; i<num; i++) titles[i]=(char*)calloc( MAXPATHLEN, sizeof( char ) );
-
-	buff=files;
-	i=0;
-	while( buff != NULL ) {
-		strcpy( titles[i++], buff->name );
-		buff=buff->next;
-	}
-
-	qsort( titles, num, sizeof( char * ), compare );
-
-	buff=files;
-	i=0;
-	while( buff != NULL ) {
-		strcpy( buff->name, titles[i++] );
-		buff=buff->next;
-	}
-
-	for( i=0; i<num; i++) free(titles[i]);
-	free(titles);
-
-	return files;
-}
-
-/**
  * clean up a list of entries
  */
-static struct entry_t *wipeTitles( struct entry_t *files ){
+void wipeTitles( struct entry_t *files ){
 	struct entry_t *buff=files;
 	while( buff != NULL ){
 		files=buff;
 		buff=files->next;
 		free(files);
 	}
-	return NULL;
 }
-
 
 /**
  * show activity roller on console
+ * this will only show when the global verbosity is larger than 0
  */
 void activity(){
 	char roller[5]="|/-\\";
-
-	rpos=(rpos+1)%4;			
-	printf( "%c\r", roller[rpos] ); fflush( stdout );
+	if( verbosity ) {
+		rpos=(rpos+1)%4;
+		printf( "%c\r", roller[rpos] ); fflush( stdout );
+	}
 }	
 
 /*
@@ -366,7 +320,10 @@ char *toLower( char *text ){
 	return text;
 }
 
-int loadBlacklist( char *path ){
+/**
+ * load a blacklist file into the blacklist structure
+ */
+int loadBlacklist( const char *path ){
 	FILE *file = NULL;
 	struct blacklist_t *ptr = NULL;
 	char *buff;
@@ -408,6 +365,109 @@ int loadBlacklist( char *path ){
 	return 0;
 }
 
+/**
+ * add a line to a playlist/blacklist
+ */
+void addToList( const char *path, const char *line ) {
+	FILE *fp;
+	fp=fopen( path, "a" );
+	if( NULL == fp ) {
+		cfail( "Could not open list for writing ", path, errno );
+	}
+	fputs( line, fp );
+	fclose( fp );
+}
+
+/**
+ * load a standard m3u playlist into a list of titles that the tools can handle
+ */
+struct entry_t *loadPlaylist( const char *path ) {
+	FILE *fp;
+	int cnt;
+	struct entry_t *current=NULL;
+	char *buff;
+
+	buff=malloc( MAXPATHLEN );
+	if( !buff ) fail( "Out of memory", "", errno );
+
+	fp=fopen( path, "r" );
+	if( !fp ) fail("Couldn't open playlist ", path,  errno);
+
+	while( !feof( fp ) ){
+		activity();
+		buff=fgets( buff, MAXPATHLEN, fp );
+		if( buff && strlen( buff ) > 1 ){
+			current=addTitle( current, buff );
+		}
+	}
+	fclose( fp );
+	current=rewindTitles( current, &cnt );
+
+	if( verbosity > 2 ) {
+		printf("Loaded %s with %i entries.\n", path, cnt );
+	}
+
+	return current;
+}
+
+/**
+ * helperfunction to remove an entry from a list of titles
+ */
+struct entry_t *removeTitle( struct entry_t *entry ) {
+	struct entry_t *buff=NULL;
+	if( NULL != entry->next ) {
+		buff=entry->next;
+		buff->prev=entry->prev;
+	}
+	if( NULL != entry->prev ) {
+		buff=entry->prev;
+		buff->next=entry->next;
+	}
+	free(entry);
+	return buff;
+}
+
+/**
+ * helperfunction to add an entry to a list of titles
+ * caveat: this does an insert after /base/ rather than an append to the end
+ */
+struct entry_t *addTitle( struct entry_t *base, const char *path ){
+	struct entry_t *root;
+	char buff[MAXPATHLEN];
+	char *b;
+
+	root = (struct entry_t*) malloc(sizeof(struct entry_t));
+	if (NULL == root) {
+		fail("Malloc failed", "", errno);
+	}
+	if( NULL != base ) {
+		root->next=base->next;
+		if( NULL != base->next ) {
+			base->next->prev=root;
+		}
+		base->next=root;
+	} else {
+		root->next = NULL;
+	}
+	root->prev=base;
+	root->length = 0;
+
+	strcpy( buff, path );
+	b = strrchr( buff, '/');
+	if (NULL != b) {
+		strncpy(root->name, b + 1, MAXPATHLEN);
+		b[0] = 0;
+		strncpy(root->path, buff, MAXPATHLEN);
+	} else {
+		strncpy(root->name, buff, MAXPATHLEN);
+		strncpy(root->path, "", MAXPATHLEN);
+	}
+	return root;
+}
+
+/**
+ * move to the start of the list of titles
+ */
 struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 	*cnt=0;
 	// scroll to the end of the list
@@ -423,6 +483,9 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 	return base;
 }
 
+/**
+ * mix a list of titles into a new order
+ */
  struct entry_t *shuffleTitles( struct entry_t *base, int *cnt ) {
 	struct entry_t *list=NULL;
 	struct entry_t *end=NULL;
@@ -541,57 +604,6 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 
 	return files;
 }
-/*
-struct entry_t *recurse( char *curdir, struct entry_t *files, struct blacklist_t *bl ){
-	struct entry_t *buff=NULL;
-	char dirbuff[MAXPATHLEN];
-	DIR *directory;
-	FILE *file;
-	struct dirent *entry;
-	char *pos;
-
-	directory=opendir( curdir );
-	if (directory != NULL){
-		entry = readdir( directory );
-		if(verbosity) activity();
-		while( entry != NULL ){
-			if( isValid( entry->d_name, bl ) ){
-				sprintf( dirbuff, "%s/%s", curdir, entry->d_name );
-				files=recurse( dirbuff, files, bl );
-			}
-			entry = readdir( directory );
-		}
-		closedir( directory );
-	}else{
-		if( isMusic( curdir ) ){
-			file=fopen(curdir, "r");
-			if( NULL == file ) fail("Couldn't open file ", curdir,  errno);
-			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", curdir, errno );
-			buff=(struct entry_t *)malloc(sizeof(struct entry_t));
-			if(buff == NULL) fail("Out of memory!", "", errno);
-			buff->prev=files;
-			buff->next=NULL;
-			if(files != NULL)files->next=buff;
-
-			pos=strrchr( curdir , '/' );
-			if( NULL == pos ){
-				strcpy( buff->name, curdir );
-				buff->path[0]='\0';
-				fprintf( stderr, "No '/' in %s! This should not be possible!", curdir );
-			}else{
-				strcpy( buff->name, pos+1 );
-				*pos='\0';
-				strcpy( buff->path, curdir );
-			}
-			buff->length=ftell( file )/1024;
-			files=buff;
-			fclose(file);
-		}
-	}
-
-	return files;
-}
-*/
 
 /*
  * sets a bit in a long bitlist

@@ -15,7 +15,7 @@
  * Or it's just playlist.m3u
  */
 char *genPLName( char *plname, const char *cd ){
-	genPathName( plname, MAXPATHLEN, cd );
+	genPathName( plname, cd, MAXPATHLEN );
 	if( strlen(plname) < 2 ) {
 		strcpy( plname, "playlist" );
 	}

@@ -89,14 +89,17 @@ int readline( char *line, size_t len, int fd );
  * entry helper functions
  */
 // unused?!
-// struct entry_t *sortTitles( struct entry_t *files );
-// struct entry_t *wipeTitles( struct entry_t *files );
+// void wipeTitles( struct entry_t *files );
 
 struct entry_t *recurse( char *curdir, struct entry_t *files );
 struct entry_t *shuffleTitles( struct entry_t *base, int *cnt );
 struct entry_t *rewindTitles( struct entry_t *base, int *cnt );
+struct entry_t *removeTitle( struct entry_t *entry );
+struct entry_t *loadPlaylist( const char *path );
+struct entry_t *addTitle( struct entry_t *base, const char *path );
 
-int loadBlacklist( char *path );
+int loadBlacklist( const char *path );
+void addToList( const char *path, const char *line );
 
 void setTitle(const char* title);
 void activity();
@@ -106,7 +109,7 @@ char *toLower( char *text );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 int isMusic( const char *name );
-char *strip( char *buff, const char *text, const int maxlen );
-char *genPathName( char *name, char *cd, size_t len );
+char *strip( char *buff, const char *text, const size_t maxlen );
+char *genPathName( char *name, const char *cd, const size_t len );
 
 #endif

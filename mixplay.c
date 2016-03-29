@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 	int p_command[2];
 
 	char line[BUFLEN];
-	char song[BUFLEN] = "";
+//	char song[BUFLEN] = "";
 	char status[BUFLEN] = "INIT";
 	char tbuf[BUFLEN];
 	char station[BUFLEN] = "mixplay "VERSION;
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	if (NULL == getcwd(curdir, MAXPATHLEN))
 		fail("Could not get current dir!", "", errno);
 
-	while ((c = getopt(argc, argv, "mb:s:r")) != -1) {
+	while ((c = getopt(argc, argv, "mb:r")) != -1) {
 		switch (c) {
 		case 'm':
 			mix = 1;
@@ -166,47 +166,32 @@ int main(int argc, char **argv) {
 		case 'r':
 			repeat = 1;
 			break;
-		case 's':
-			strncpy(song, optarg, BUFLEN);
-			break;
 		default:
 			usage(argv[0]);
 			break;
 		}
 	}
 
-	if (song[0] != 0) {
-		// play single song...
-		root = (struct entry_t*) malloc(sizeof(struct entry_t));
-		if (NULL == root) {
-			fail("Malloc failed", "", errno);
-		}
-		root->next = NULL;
-		root->prev = NULL;
-		root->length = 0;
-		b = strchr(song, '/');
-		if (NULL != b) {
-			strncpy(root->name, b + 1, MAXPATHLEN);
-			b[0] = 0;
-			strncpy(root->path, song, MAXPATHLEN);
+	if (optind < argc) {
+		if( strstr( argv[optind], ".mp3" ) ) {
+			// play single song...
+			root=addTitle( root, argv[optind] );
+		} else if ( strstr( argv[optind], "m3u" ) ) {
+			root=loadPlaylist( argv[optind] );
 		} else {
-			strncpy(root->name, song, MAXPATHLEN);
-			strncpy(root->path, "", MAXPATHLEN);
-		}
-	} else {
-		if (optind < argc) {
 			strcpy(curdir, argv[optind]);
 			if ((strlen(curdir) == 2) && (curdir[1] == ':'))
 				sprintf(curdir, "%s/", curdir);
 			else if (curdir[strlen(curdir) - 1] == '/')
 				curdir[strlen(curdir) - 1] = 0;
+
+			if (0 != blname[0])
+				loadBlacklist(blname);
+
+			root = recurse(curdir, root);
 		}
-
-		if (0 != blname[0])
-			loadBlacklist(blname);
-
-		root = recurse(curdir, root);
 	}
+
 
 	if (NULL != root) {
 		if (mix)
@@ -295,6 +280,19 @@ int main(int argc, char **argv) {
 					case 'r':
 						write( p_command[1], "JUMP 0\n", 8 );
 					break;
+					case 'b':
+						if( 0 == strlen(blname) ) {
+							strcpy( blname, "blacklist.txt" );
+						}
+						addToList( blname, current->name );
+						current=removeTitle( current );
+						order=2;
+						write( p_command[1], "STOP\n", 6 );
+					break;
+					case 'f':
+						sprintf( tbuf, "%s/%s", current->path, current->name );
+						addToList( "favourites.m3u", tbuf );
+					break;
 					}
 				}
 
@@ -381,7 +379,7 @@ int main(int argc, char **argv) {
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							if( 0 == order ) {
+							if( ( NULL == current ) || ( 0 == order ) ) {
 								strcpy( status, "STOP" );
 								break;
 							}
@@ -398,8 +396,7 @@ int main(int argc, char **argv) {
 								} else {
 									current = current->next;
 								}
-							}
-							else {
+							} else if( -1 == order ) {
 								if (current->prev != NULL) {
 									current=current->prev;
 								} else {
