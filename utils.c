@@ -4,9 +4,26 @@
 typedef unsigned char* strval_t;
 
 int rpos=0;
-int verbosity=1;
+static int _ftverbosity=1;
 struct blacklist_t *blacklist=NULL;
 
+int getVerbosity() {
+	return _ftverbosity;
+}
+
+int setVerbosity(int v) {
+	_ftverbosity=v;
+	return _ftverbosity;
+}
+
+int incVerbosity() {
+	_ftverbosity++;
+	return _ftverbosity;
+}
+
+void muteVerbosity() {
+	_ftverbosity=0;
+}
 /**
  * Some ANSI code magic to set the terminal title
  **/
@@ -128,26 +145,18 @@ char *genPathName( char *name, const char *cd, const size_t len ){
  * error - errno that was set.
  */
 void fail( const char* msg, const char* info, int error ){
+	endwin();
 	if(error == 0 )
 		fprintf(stderr, "\n%s%s\n", msg, info );
 	else
-		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, error, strerror( error ) );
+		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, ABS(error), strerror( ABS(error) ) );
 	fprintf(stderr, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
 	while(getc(stdin)!=10);
-	if (error != 0 ) exit(error);
+	if (error > 0 ) exit(error);
 	return;
 }
-
-/**
- * end screen session, print an error message, errno and quit
- */
-void cfail(const char *msg, const char *info, int error ) {
-	endwin();
-	fail( msg, info, error );
-}
-
 
 /**
  * Draw a horizontal line
@@ -221,13 +230,29 @@ int readline( char *line, size_t len, int fd ){
 }
 
 /**
+ * checks if text ends with suffix
+ * this function is case insensitive
+ */
+int endsWith( const char *text, const char *suffix ){
+	int i, tlen, slen;
+	tlen=strlen(text);
+	slen=strlen(suffix);
+	if( tlen < slen ) {
+		return 0;
+	}
+	for( i=slen; i>0; i-- ) {
+		if( tolower(text[tlen-i]) != tolower(suffix[slen-i]) ) {
+			return 0;
+		}
+	}
+	return -1;
+}
+
+/**
  * Check if a file is a music file
  */
 int isMusic( const char *name ){
-	char loname[MAXPATHLEN];
-	strncpy( loname, name, MAXPATHLEN );
-	toLower( loname );
-	if( strstr( loname, ".mp3" ) || strstr( loname, ".ogg" ) ) return -1;
+	if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return -1;
 	return 0;
 }
 
@@ -249,6 +274,17 @@ static int isValid( const char *name ){
 		ptr=ptr->next;
 	}
 	return -1;
+}
+
+/**
+ * @todo: needs some work!
+ */
+int isURL( const char *uri ){
+	char line[MAXPATHLEN];
+	strncpy( line, uri, MAXPATHLEN );
+	toLower(line);
+	if( strstr( line, "://" ) ) return -1;
+	return 0;
 }
 
 /**
@@ -305,7 +341,7 @@ void wipeTitles( struct entry_t *files ){
  */
 void activity(){
 	char roller[5]="|/-\\";
-	if( verbosity ) {
+	if( _ftverbosity ) {
 		rpos=(rpos+1)%4;
 		printf( "%c\r", roller[rpos] ); fflush( stdout );
 	}
@@ -356,7 +392,7 @@ int loadBlacklist( const char *path ){
 		}
 	}
 
-	if( verbosity > 2 ) {
+	if( _ftverbosity > 2 ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
 	}
 
@@ -372,9 +408,10 @@ void addToList( const char *path, const char *line ) {
 	FILE *fp;
 	fp=fopen( path, "a" );
 	if( NULL == fp ) {
-		cfail( "Could not open list for writing ", path, errno );
+		fail( "Could not open list for writing ", path, errno );
 	}
 	fputs( line, fp );
+	fputc( '\n', fp );
 	fclose( fp );
 }
 
@@ -396,14 +433,14 @@ struct entry_t *loadPlaylist( const char *path ) {
 	while( !feof( fp ) ){
 		activity();
 		buff=fgets( buff, MAXPATHLEN, fp );
-		if( buff && strlen( buff ) > 1 ){
+		if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ){
 			current=addTitle( current, buff );
 		}
 	}
 	fclose( fp );
 	current=rewindTitles( current, &cnt );
 
-	if( verbosity > 2 ) {
+	if( _ftverbosity > 2 ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
 	}
 
@@ -462,6 +499,7 @@ struct entry_t *addTitle( struct entry_t *base, const char *path ){
 		strncpy(root->name, buff, MAXPATHLEN);
 		strncpy(root->path, "", MAXPATHLEN);
 	}
+	strncpy(root->display, root->name, MAXPATHLEN );
 	return root;
 }
 
@@ -478,7 +516,7 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 		(*cnt)++;
 	}
 
-	if (verbosity > 0 ) printf("Found %i titles\n", *cnt);
+	if (_ftverbosity > 0 ) printf("Found %i titles\n", *cnt);
 
 	return base;
 }
@@ -552,7 +590,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	int num, i;
 	char *pos;
 
-	if( verbosity > 2 ) {
+	if( _ftverbosity > 2 ) {
 		printf("Checking %s\n", curdir );
 	}
 	// get all music files according to the blacklist

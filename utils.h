@@ -72,10 +72,15 @@ struct blacklist_t {
 	struct blacklist_t *next;
 };
 
+
+int getVerbosity();
+int setVerbosity(int);
+int incVerbosity();
+void muteVerbosity();
+
 /**
  * curses helper functions
  */
-void cfail(const char *msg, const char *info, int error );
 void dhline(int r, int c, int len);
 void dvline(int r, int c, int len);
 void drawbox(int r0, int c0, int r1, int c1);
@@ -111,5 +116,7 @@ int getDirs( const char *cd, struct dirent ***dirlist );
 int isMusic( const char *name );
 char *strip( char *buff, const char *text, const size_t maxlen );
 char *genPathName( char *name, const char *cd, const size_t len );
+int endsWith( const char *text, const char *suffix );
+int isURL( const char *uri );
 
 #endif

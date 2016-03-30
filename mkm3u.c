@@ -11,8 +11,6 @@
 #define MAXPATHLEN 256
 #endif
 
-extern int verbosity;
-
 void usage( char *progname ){
 	/**
 	 * print out CLI usage
@@ -36,7 +34,7 @@ void shufflem3u( struct entry_t *list, int cnt,  FILE *fp ) {
 	srand(getpid()*tv.tv_sec);
 	base=list;
 
-	if (verbosity > 0 ) printf("Found %i titles\n", cnt);
+	if (getVerbosity() > 0 ) printf("Found %i titles\n", cnt);
 
 	// Stepping through every item and tossing it away afterwards
 	for(i=cnt; i>0; i--){
@@ -103,7 +101,7 @@ int main( int argc, char **argv ){
 			strcpy( blname, optarg );
 			break;
 		case 'v':
-			verbosity = atoi( optarg );
+			setVerbosity(atoi( optarg ));
 			break;
 		default:
 			usage( argv[0] );
@@ -113,7 +111,7 @@ int main( int argc, char **argv ){
 	if( optind < argc ) strcpy( target, argv[optind] );
 
 	/* Print info and give chance to bail out */
-	if(verbosity){
+	if(getVerbosity()){
 		printf( "Source: %s\n", curdir );
 		printf( "Target: %s\n", target );
 		printf( "Using MP3/OGG files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
@@ -121,10 +119,10 @@ int main( int argc, char **argv ){
 			printf( "Using %s as blacklist\n", blname );
 		if( mix )
 			printf( "Shuffling titles\n" );
-		if( verbosity > 1 )
+		if( getVerbosity() > 1 )
 			printf( "Press enter to continue or CTRL-C to stop.\n" );
 		fflush( stdout );
-		if( verbosity > 1 )
+		if( getVerbosity() > 1 )
 			while(getchar()!=10);
 	}
 
@@ -165,7 +163,7 @@ int main( int argc, char **argv ){
 	}
 
 	fclose( pl );
-	if(verbosity) printf("Done.\n");
+	if(getVerbosity()) printf("Done.\n");
 
 	return 0;
 }

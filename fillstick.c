@@ -1,8 +1,6 @@
 #include "utils.h"
 #include <getopt.h>
 
-extern int verbosity;
-
 long freekb(const char * part) {
 #ifdef __MINGW_H
 	DWORD free;
@@ -43,7 +41,7 @@ void clean( char* target ){
 			dirbuff=opendir( buff );
 			if( NULL == dirbuff ){
 				if( -1 == unlink( buff ) ) fail( "Couldn't delete file ", buff, errno );
-				if( verbosity > 0 ){
+				if( getVerbosity() > 0 ){
 					activity();
 				}
 			}else{
@@ -69,8 +67,8 @@ void copy( struct entry_t *title, const char* target, int index ){
 	if( NULL == buffer ) fail( "Out of memory!", "", errno );
 	sprintf( filename, "%strack%03i.mp3", target, index);
 
-	if( verbosity > 2 ) printf( "Copy %s to %s\r", title->path, filename );
-	else if( verbosity == 1 )  printf( "Copy Track %03i\r", index );
+	if( getVerbosity() > 2 ) printf( "Copy %s to %s\r", title->path, filename );
+	else if( getVerbosity() == 1 )  printf( "Copy Track %03i\r", index );
 
 	in=fopen( title->path, "rb" );
 	if( NULL == in ) fail( "Couldn't open infile ", title->path, errno );
@@ -83,16 +81,16 @@ void copy( struct entry_t *title, const char* target, int index ){
 		if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) )
 			fail( "Target is full!", "", errno );
 		size = fread( buffer, sizeof( unsigned char ), BUFFSIZE, in );
-		if( verbosity > 0 ){
-			if( verbosity > 2 ) printf( "Copy %s to %s ", title->path, filename );
-			else if( verbosity == 1 )  printf( "Copy Track %03i ", index );
+		if( getVerbosity() > 0 ){
+			if( getVerbosity() > 2 ) printf( "Copy %s to %s ", title->path, filename );
+			else if( getVerbosity() == 1 )  printf( "Copy Track %03i ", index );
 			activity();
 		}
 	}
 
-	if( verbosity > 0 ){
-		if( verbosity > 2 ) printf( "Copy %s to %s ", title->path, filename );
-		else if( verbosity == 1 )  printf( "Copy Track %03i ", index );
+	if( getVerbosity() > 0 ){
+		if( getVerbosity() > 2 ) printf( "Copy %s to %s ", title->path, filename );
+		else if( getVerbosity() == 1 )  printf( "Copy Track %03i ", index );
 	}
 	fclose( in );
 	fclose( out );
@@ -119,7 +117,7 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 	}
 	base=list;
 
-	if (verbosity > 2 ) printf("Found %i titles\n", cnt);
+	if ( getVerbosity() > 2 ) printf("Found %i titles\n", cnt);
 
 	/* Stepping through every item and tossing it away afterwards */
 	for(i=cnt; i>0; i--){
@@ -138,14 +136,14 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 					copy( list, target, no );
 					no++;
 					size=freekb( target );
-					if( verbosity > 0 ) printf("[%3li%%]\n", 100-((100*size)/maxsize));
+					if( getVerbosity() > 0 ) printf("[%3li%%]\n", 100-((100*size)/maxsize));
 				}				
 			}else{			
 				size=size+list->length;
 				if ( size < maxlen ) {
 					copy( list, target, no );
 					no++;
-					if( verbosity > 0 ) printf("[%3li%%]\n", (100*size)/maxlen);
+					if( getVerbosity() ) printf("[%3li%%]\n", (100*size)/maxlen);
 				}
 			}
 		}
@@ -216,7 +214,7 @@ int main( int argc, char **argv ){
 			loadBlacklist( blname );
 			break;
 		case 'v':
-			verbosity = atoi( optarg );
+			setVerbosity(atoi( optarg ));
 			break;
 		case 'n':
 			delete = 0;
@@ -228,7 +226,7 @@ int main( int argc, char **argv ){
 	}
 
 	/* Print info and give chance to bail out */
-	if( verbosity > 0 ){
+	if( getVerbosity() > 0 ){
 		printf( "Source: %s\n", curdir );
 		printf( "Target: %s\n", target );
 		if( 0 == mbsize )
@@ -247,9 +245,9 @@ int main( int argc, char **argv ){
 
 	/* Delete all files on the target */
 	if(delete){
-		if( verbosity > 0 ) printf( "Cleaning %s\n", target ); 
+		if( getVerbosity() ) printf( "Cleaning %s\n", target );
 		clean( target );
-		if( verbosity > 0 ) {
+		if( getVerbosity() ) {
 			printf( "OK\n" );
 			fflush( stdout );
 		}
@@ -257,31 +255,31 @@ int main( int argc, char **argv ){
 
 	free=freekb( target );
 	if ( 0 == mbsize ){
-		if( verbosity > 0 ) printf( "Size: %li MB\n", free/1024 );
-	} else 	if (verbosity > 1) 
+		if( getVerbosity() ) printf( "Size: %li MB\n", free/1024 );
+	} else 	if ( getVerbosity() > 1)
 		printf( "Space on device: %liM\n", free/1024 );
 
 	/* Create title database */
-	if( verbosity > 0 ) printf("Scanning %s for mp3 files ..\n", curdir );
+	if( getVerbosity() ) printf("Scanning %s for mp3 files ..\n", curdir );
 	fflush( stdout );
 	list = recurse( curdir, NULL );
-	if( verbosity > 0 ){
+	if( getVerbosity() ){
 		printf( "OK\n");
 		fflush( stdout );
 	}
 
 	/* Copy titles */
 	if(list == NULL){
-		if( verbosity > 0 ) printf ("No music found in %s\n", curdir );
+		if( getVerbosity() ) printf ("No music found in %s\n", curdir );
 	}else{
 		writePlaylist( list, mbsize, target );
 	}
 
-	if( verbosity > 0 ){
+	if( getVerbosity() ){
 		printf("Done.\n");
 		fflush( stdout );
 	}
-	if( verbosity > 1 )	while(getc(stdin)!=10);
+	if( getVerbosity() > 1 )	while(getc(stdin)!=10);
 
 	return 0;
 }
