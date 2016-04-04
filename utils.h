@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef FBFS_UTILS_H
+#define FBFS_UTILS_H
 
 #include <errno.h>
 #include <string.h>
@@ -12,22 +12,9 @@
 #include <dirent.h>
 #include <ctype.h>
 #include <strings.h>
-
-#ifdef __MINGW_H
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
-  #include <dir.h>
-#else
-  #include <sys/types.h>
-  #include <sys/statvfs.h>
-#endif
+#include <sys/statvfs.h>
 
 #include <time.h>
-
-/* the ABS macro misses here and there */
-#ifndef ABS
-#define ABS(x) ((x<0)?-(x):x)
-#endif
 
 #define HOR '-'
 #define VER '|'

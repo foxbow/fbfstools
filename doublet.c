@@ -89,12 +89,12 @@ int main( int argc, char **argv ){
 	while( NULL != root->next ){
 		runner=root->next;
 		while( NULL != runner ){
-			if( ABS( root->length - runner->length )  < range ){
+			if( abs( root->length - runner->length )  < range ){
 				result=fncmp( root->name, runner->name );
 				if(  result >= trigger ){
 					printf( "(1) %s/%s\n", root->path, root->name );
 					printf( "(2) %s/%s\n", runner->path, runner->name ); 
-					printf( "(%i/%li) Delete (1/2) or keep? ",  result, ABS( root->length - runner->length )  ); fflush(stdout);
+					printf( "(%i/%i) Delete (1/2) or keep? ",  result, abs( root->length - runner->length )  ); fflush(stdout);
 					c=getchar();
 					while(c!=10){
 						switch(c){

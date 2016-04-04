@@ -3,7 +3,7 @@ CCFLAGS=-DVERSION=\"${VERSION}\"
 
 EXES=bin/doublet bin/mkm3u bin/fillstick bin/mkplaylists bin/fixdatenames bin/mixplay
 # bin/sortlink 
-CCFLAGS+=-g
+# CCFLAGS+=-g
 
 # Keep object files
 .PRECIOUS: %.o

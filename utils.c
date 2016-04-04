@@ -149,7 +149,7 @@ void fail( const char* msg, const char* info, int error ){
 	if(error == 0 )
 		fprintf(stderr, "\n%s%s\n", msg, info );
 	else
-		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, ABS(error), strerror( ABS(error) ) );
+		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, abs(error), strerror( abs(error) ) );
 	fprintf(stderr, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
@@ -252,8 +252,11 @@ int endsWith( const char *text, const char *suffix ){
  * Check if a file is a music file
  */
 int isMusic( const char *name ){
+	return endsWith( name, ".mp3" );
+	/*
 	if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return -1;
 	return 0;
+	*/
 }
 
 /**
