@@ -24,7 +24,7 @@ void usage( char *progname ){
 /**
  * Draw the application frame
  */
-void drawframe(char *station, struct entry_t *current, char *status, int stream ) {
+void drawframe(char *station, struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos, rows;
 	int row, col;
 	int middle;
@@ -277,7 +277,7 @@ int main(int argc, char **argv) {
 				to.tv_sec=1;
 				to.tv_usec=0; // 1/4 sec
 				i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
-				redraw=1;
+				redraw=0;
 				// Interpret keypresses
 				if( FD_ISSET( fileno(stdin), &fds ) ) {
 					key=getch();
@@ -336,10 +336,9 @@ int main(int argc, char **argv) {
 					}
 				}
 
-				// Interpret mpg123 output
-				if( FD_ISSET( p_status[0], &fds ) ) {
-					readline(line, 512, p_status[0]);
-//					redraw = 1;
+				// Interpret mpg123 output and ignore invalid lines
+				if( FD_ISSET( p_status[0], &fds ) &&
+						( 3 < readline(line, 512, p_status[0]) ) ) {
 					switch (line[1]) {
 					int cmd, in, rem, q;
 					case 'R': // startup
@@ -387,6 +386,7 @@ int main(int argc, char **argv) {
 								strip(station, b + 6, BUFLEN);
 							}
 						}
+						redraw=1;
 						break;
 					case 'J': // JUMP reply
 						redraw=0;
@@ -444,6 +444,7 @@ int main(int argc, char **argv) {
 								sprintf(status, "%i:%02i:%02i PLAYING", in/3600, (in%3600)/60, in%60 );
 							}
 						}
+						redraw=1;
 						break;
 					case 'P': // Player status
 						cmd = atoi(&line[3]);
@@ -487,6 +488,7 @@ int main(int argc, char **argv) {
 							drawframe( station, current, status, stream );
 							sleep(1);
 						}
+						redraw=1;
 						break;
 					case 'E':
 						sprintf( status, "ERROR: %s", line);

@@ -126,7 +126,11 @@ char *genPathName( char *name, const char *cd, const size_t len ){
 				}
 				if( ( pl > 0 ) && ( ' ' == p0[pl] ) ) {
 					p0=p0+pl+1;
+					while(!isalpha(*p0)) {
+						p0++;
+					}
 				}
+
 				strncat( name, p2, len );
 				strncat( name, " - ", len );
 				strncat( name, p0, len );
@@ -196,18 +200,9 @@ int readline( char *line, size_t len, int fd ){
 
 	while ( 0 != read(fd, &c, 1 ) ) {
 		if( cnt < len ) {
+			if( '\n' == c ) c=0;
 			line[cnt]=c;
 			cnt++;
-			if( '\n' == c ) {
-				if( cnt < len ) {
-					line[cnt]=0;
-					cnt++;
-					return cnt;
-				} else {
-					return -1;
-				}
-			}
-			// avoid reading behind string end
 			if( 0 == c ) {
 				return cnt;
 			}
@@ -542,9 +537,10 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 
 	// Stepping through every item
 	while( base != NULL ) {
-		int j, pos;
+		int j, pos, num;
+		num=*cnt;
 		runner=base;
-		pos=RANDOM(97);
+		pos=RANDOM(num--);
 		for(j=1; j<=pos; j++){
 			runner=runner->next;
 			if( runner == NULL ) {
@@ -570,41 +566,7 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 		}
 		end=runner;
 	}
-/*
-	for(i=*cnt; i>0; i--){
-		int j, pos;
-		runner=base;
-		pos=RANDOM(i);
-		for(j=1; j<=pos; j++){
-			runner=runner->next;
-		}
 
-		if ( ( runner->length < MAXSIZE ) && ( runner->length > MINSIZE ) ) {
-			// Remove entry from base
-			if(runner==base) base=runner->next;
-
-			if(runner->prev != NULL){
-				runner->prev->next=runner->next;
-			}
-			if(runner->next != NULL){
-				runner->next->prev=runner->prev;
-			}
-
-			// add entry to list
-			runner->next=NULL;
-			runner->prev=end;
-			if( NULL != end ) {
-				end->next=runner;
-			}
-			end=runner;
-
-			if( NULL == base ) {
-				base=runner;
-			}
-		}
-	}
-*/
-//	base=list;
 	return rewindTitles(end, cnt);
 }
 
