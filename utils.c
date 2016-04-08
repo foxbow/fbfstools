@@ -5,7 +5,7 @@ typedef unsigned char* strval_t;
 
 int rpos=0;
 static int _ftverbosity=1;
-struct blacklist_t *blacklist=NULL;
+static struct blacklist_t *blacklist=NULL;
 
 int getVerbosity() {
 	return _ftverbosity;
@@ -69,7 +69,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 char *genPathName( char *name, const char *cd, const size_t len ){
 	char *p0, *p1, *p2;
 	char curdir[MAXPATHLEN];
-	int pl;
+	int pl=1;
 
 	// Create working copy of the path and cut off trailing /
 	strncpy( curdir, cd, MAXPATHLEN );
@@ -79,9 +79,8 @@ char *genPathName( char *name, const char *cd, const size_t len ){
 	}
 
 	// cut off .mp3
-	p0 = strstr( curdir, ".mp3" );
-	if( NULL != p0 ) {
-		*p0=0;
+	if( endsWith( curdir, ".mp3" ) ) {
+		curdir[strlen( curdir ) - 4]=0;
 		pl=0; // guessing artist/title combination
 	}
 
@@ -126,7 +125,7 @@ char *genPathName( char *name, const char *cd, const size_t len ){
 					}
 				}
 				if( ( pl > 0 ) && ( ' ' == p0[pl] ) ) {
-					p0=p0+pl+3;
+					p0=p0+pl+1;
 				}
 				strncat( name, p2, len );
 				strncat( name, " - ", len );
@@ -542,6 +541,36 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 	base = rewindTitles( base, cnt );
 
 	// Stepping through every item
+	while( base != NULL ) {
+		int j, pos;
+		runner=base;
+		pos=RANDOM(97);
+		for(j=1; j<=pos; j++){
+			runner=runner->next;
+			if( runner == NULL ) {
+				runner=base;
+			}
+		}
+
+		// Remove entry from base
+		if(runner==base) base=runner->next;
+
+		if(runner->prev != NULL){
+			runner->prev->next=runner->next;
+		}
+		if(runner->next != NULL){
+			runner->next->prev=runner->prev;
+		}
+
+		// add entry to list
+		runner->next=NULL;
+		runner->prev=end;
+		if( NULL != end ) {
+			end->next=runner;
+		}
+		end=runner;
+	}
+/*
 	for(i=*cnt; i>0; i--){
 		int j, pos;
 		runner=base;
@@ -574,7 +603,7 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 			}
 		}
 	}
-
+*/
 //	base=list;
 	return rewindTitles(end, cnt);
 }

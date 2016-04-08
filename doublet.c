@@ -9,6 +9,7 @@
  * print out CLI usage
  */
 void usage( char *progname ){
+	printf( "%s - find and remove duplicate music files\n", progname );
 	printf( "Usage: %s [-s <sourcedir>] [-t <trigger>] [-r <range>]\n", progname );
 	printf( "-s <path>    : set path to directory with music [current dir]\n" );
 	printf( "-r <range>   : file size range for similarity [%i]k\n", RANGE );

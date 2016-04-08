@@ -2,20 +2,11 @@
 #include <getopt.h>
 
 long freekb(const char * part) {
-#ifdef __MINGW_H
-	DWORD free;
-	PULARGE_INTEGER buff=NULL;
-	if(GetDiskFreeSpaceEx(part, (PULARGE_INTEGER)&free, buff, buff))
-		return free/1024;
-	else
-		fail( "Couldn't get free space for ", part, errno );
-#else
 	struct statvfs buf;
 	if (0 == statvfs(part, &buf))
 		return (buf.f_bavail*buf.f_bsize)/1024;
 	else
 		fail( "Couldn't get free space for ", part, errno );
-#endif
 	return 0;
 }
 
@@ -163,6 +154,7 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
  * print out CLI usage
  */
 void usage( char *progname ){
+	printf( "%s - copy music onto a player\n", progname );
 	printf( "Usage: %s [-s <sourcedir>] [-t <tagetdir>] [-m <megabytes>] [-n] [-l <path to blacklist>] [-v <verbosity>]\n", progname );
 	printf( "-s <path> : set path to directory with music [current dir]\n" );
 	printf( "-t <path> : set path to target directory/device [%s]\n", TARGETDIR );

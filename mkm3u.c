@@ -15,6 +15,7 @@ void usage( char *progname ){
 	/**
 	 * print out CLI usage
 	 */
+	printf( "%s - create a recursive playlist\n", progname );
 	printf( "Usage: %s [-s <sourcedir>] [-b <path to blacklist>] [-v <verbosity>] [playlist]\n", progname );
 	printf( "-s <path>  : set path to directory with music [current dir]\n" );
 	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
@@ -114,7 +115,7 @@ int main( int argc, char **argv ){
 	if(getVerbosity()){
 		printf( "Source: %s\n", curdir );
 		printf( "Target: %s\n", target );
-		printf( "Using MP3/OGG files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
+		printf( "Using MP3 files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
 		if( 0 != blname[0] )
 			printf( "Using %s as blacklist\n", blname );
 		if( mix )

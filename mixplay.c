@@ -12,6 +12,7 @@ volatile int running=1;
  * print out CLI usage
  */
 void usage( char *progname ){
+	printf( "%s - console frontend to mpg123\n", progname );
 	printf( "Usage: %s [-b <file>] [-m] [path|URL]\n", progname );
 	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
@@ -423,8 +424,9 @@ int main(int argc, char **argv) {
 						*b=0;
 						b=strrchr( line, ' ' );
 						in=atoi(b);
+						// file play
 						if( 0 != rem ) {
-							q=in/((rem+in)/30);
+							q=(30*in)/(rem+in);
 							memset( tbuf, 0, BUFLEN );
 							for( i=0; i<30; i++ ) {
 								if( i < q ) tbuf[i]='=';
@@ -433,6 +435,7 @@ int main(int argc, char **argv) {
 							}
 							sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );
 						}
+						// stream play
 						else {
 							if( in/60 < 60 ) {
 								sprintf(status, "%i:%02i PLAYING", in/60, in%60 );
