@@ -449,14 +449,20 @@ struct entry_t *loadPlaylist( const char *path ) {
  */
 struct entry_t *removeTitle( struct entry_t *entry ) {
 	struct entry_t *buff=NULL;
+
 	if( NULL != entry->next ) {
 		buff=entry->next;
 		buff->prev=entry->prev;
+
+		if( NULL != buff->prev ) {
+			buff->prev->next=buff;
+		}
 	}
-	if( NULL != entry->prev ) {
+	else if( NULL != entry->prev ) {
 		buff=entry->prev;
-		buff->next=entry->next;
+		buff->next=NULL;
 	}
+
 	free(entry);
 	return buff;
 }
