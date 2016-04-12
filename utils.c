@@ -431,11 +431,11 @@ struct entry_t *loadPlaylist( const char *path ) {
 		activity();
 		buff=fgets( buff, MAXPATHLEN, fp );
 		if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ){
-			current=addTitle( current, buff );
+			current=insertTitle( current, buff );
 		}
 	}
 	fclose( fp );
-	current=rewindTitles( current, &cnt );
+	current=rewindTitles( current );
 
 	if( _ftverbosity > 2 ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
@@ -446,6 +446,10 @@ struct entry_t *loadPlaylist( const char *path ) {
 
 /**
  * helperfunction to remove an entry from a list of titles
+ *
+ * returns the next item in the list. If the next item is NULL, the previous
+ * item will be returned. If entry was the last item in the list NULL will be
+ * returned.
  */
 struct entry_t *removeTitle( struct entry_t *entry ) {
 	struct entry_t *buff=NULL;
@@ -468,10 +472,9 @@ struct entry_t *removeTitle( struct entry_t *entry ) {
 }
 
 /**
- * helperfunction to add an entry to a list of titles
- * caveat: this does an insert after /base/ rather than an append to the end
+ * helperfunction to insert an entry into a list of titles
  */
-struct entry_t *addTitle( struct entry_t *base, const char *path ){
+struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	struct entry_t *root;
 	char buff[MAXPATHLEN];
 	char *b;
@@ -506,45 +509,56 @@ struct entry_t *addTitle( struct entry_t *base, const char *path ){
 	return root;
 }
 
+int countTitles( struct entry_t *base ) {
+	int cnt=0;
+	if( NULL == base ){
+		return 0;
+	}
+
+	base=rewindTitles( base );
+	while( NULL != base->next ) {
+		cnt++;
+		base=base->next;
+	}
+	if (_ftverbosity > 0 ) printf("Found %i titles\n", cnt );
+
+	return cnt;
+}
+
 /**
  * move to the start of the list of titles
  */
-struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
-	*cnt=0;
+struct entry_t *rewindTitles( struct entry_t *base ) {
 	// scroll to the end of the list
 	while ( NULL != base->next ) base=base->next;
 	// scroll back and count entries
 	while ( NULL != base->prev ) {
 		base=base->prev;
-		(*cnt)++;
 	}
-
-	if (_ftverbosity > 0 ) printf("Found %i titles\n", *cnt);
-
 	return base;
 }
 
 /**
  * mix a list of titles into a new order
  */
- struct entry_t *shuffleTitles( struct entry_t *base, int *cnt ) {
+ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *list=NULL;
 	struct entry_t *end=NULL;
 	struct entry_t *runner=NULL;
 
-	int i, no=0;
+	int i, num=0;
 	struct timeval tv;
 
 	// improve 'randomization'
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	base = rewindTitles( base, cnt );
+	base = rewindTitles( base );
+	num  = countTitles(base)+1;
 
 	// Stepping through every item
 	while( base != NULL ) {
-		int j, pos, num;
-		num=*cnt;
+		int j, pos;
 		runner=base;
 		pos=RANDOM(num--);
 		for(j=1; j<=pos; j++){
@@ -573,7 +587,53 @@ struct entry_t *rewindTitles( struct entry_t *base, int *cnt ) {
 		end=runner;
 	}
 
-	return rewindTitles(end, cnt);
+	return rewindTitles( end );
+}
+
+struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mix ) {
+	int dir=num;
+	num=abs(num);
+
+	if( 0 == num ) {
+		return current;
+	}
+
+	if( NULL == current ){
+		return NULL;
+	}
+
+	while( num > 0 ) {
+		if( dir < 0 ) {
+			if( NULL != current->prev ) {
+				current=current->prev;
+			}
+			else {
+				num=1;
+			}
+		}
+		else {
+			if( NULL != current->next ) {
+				current=current->next;
+			}
+			else {
+				if( repeat ) {
+					if( mix ) {
+						current=shuffleTitles( current );
+					}
+					else {
+						current=rewindTitles( current );
+					}
+				}
+				else {
+					num=1;
+				}
+			}
+
+		}
+		num--;
+	}
+
+	return current;
 }
 
 /*

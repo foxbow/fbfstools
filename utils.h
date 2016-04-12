@@ -84,11 +84,13 @@ int readline( char *line, size_t len, int fd );
 // void wipeTitles( struct entry_t *files );
 
 struct entry_t *recurse( char *curdir, struct entry_t *files );
-struct entry_t *shuffleTitles( struct entry_t *base, int *cnt );
-struct entry_t *rewindTitles( struct entry_t *base, int *cnt );
+struct entry_t *shuffleTitles( struct entry_t *base );
+struct entry_t *rewindTitles( struct entry_t *base );
 struct entry_t *removeTitle( struct entry_t *entry );
 struct entry_t *loadPlaylist( const char *path );
-struct entry_t *addTitle( struct entry_t *base, const char *path );
+struct entry_t *insertTitle( struct entry_t *base, const char *path );
+struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mix );
+int countTitles( struct entry_t *base );
 
 int loadBlacklist( const char *path );
 void addToList( const char *path, const char *line );

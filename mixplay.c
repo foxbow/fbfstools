@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
 	 */
 	struct entry_t *root = NULL;
 	struct entry_t *current = NULL;
+	struct entry_t *next = NULL;
 
 	// pipes to communicate with mpg123
 	int p_status[2];
@@ -151,7 +152,7 @@ int main(int argc, char **argv) {
 	pid_t pid;
 	int redraw;
 	// set when a stream is played
-	int stream;
+	int stream=0;
 	// no repeat
 	int repeat = 0;
 	// normal playing order
@@ -191,13 +192,12 @@ int main(int argc, char **argv) {
 				strcpy( line, "@" );
 			}
 			strncat( line, argv[optind], MAXPATHLEN );
-			// root=addTitle( root, argv[optind] );
-			root=addTitle( root, line );
+			root=insertTitle( root, line );
 			root->display[0]=0; // hide URL from display
 		}
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
-			root=addTitle( root, argv[optind] );
+			root=insertTitle( root, argv[optind] );
 		}
 		else if ( endsWith( argv[optind], "m3u" ) ) {
 			root=loadPlaylist( argv[optind] );
@@ -226,9 +226,9 @@ int main(int argc, char **argv) {
 
 	if (NULL != root) {
 		if (mix)
-			root = shuffleTitles(root, &cnt);
+			root = shuffleTitles(root );
 		else
-			root = rewindTitles(root, &cnt);
+			root = rewindTitles(root );
 
 		// create communication pipes
 		pipe(p_status);
@@ -307,6 +307,14 @@ int main(int argc, char **argv) {
 								order=-1;
 								write( p_command[1], "STOP\n", 6 );
 							break;
+							case 'N':
+								order=5;
+								write( p_command[1], "STOP\n", 6 );
+							break;
+							case 'P':
+								order=-5;
+								write( p_command[1], "STOP\n", 6 );
+							break;
 							case KEY_LEFT:
 								write( p_command[1], "JUMP -64\n", 10 );
 							break;
@@ -323,7 +331,10 @@ int main(int argc, char **argv) {
 								}
 								addToList( blname, current->name );
 								current=removeTitle( current );
-								order=2;
+								if( NULL != current->prev ) {
+									current=current->prev;
+								}
+								order=1;
 								write( p_command[1], "STOP\n", 6 );
 							break;
 							case 'f':
@@ -363,7 +374,7 @@ int main(int argc, char **argv) {
 								b = b + 13;
 								*strchr(b, '\'') = '\0';
 								if( strlen(current->display) != 0 ) {
-									addTitle( current, current->display );
+									insertTitle( current, current->display );
 								}
 								strip(current->display, b, BUFLEN );
 							}
@@ -450,32 +461,14 @@ int main(int argc, char **argv) {
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							if( ( NULL == current ) || ( 0 == order ) ) {
+							next = skipTitles( current, order, repeat, mix );
+							if ( next == current ) {
 								strcpy( status, "STOP" );
-								break;
 							}
-							if( 1 == order ) {
-								if (current->next == NULL) {
-									if (repeat) {
-										current = root;
-										if (mix)
-											current = shuffleTitles(root, &cnt);
-									} else {
-										strcpy( status, "STOP" );
-										break;
-									}
-								} else {
-									current = current->next;
-								}
-							} else if( -1 == order ) {
-								if (current->prev != NULL) {
-									current=current->prev;
-								} else {
-									strcpy( status, "STOP" );
-									break;
-								}
+							else {
+								current=next;
+								sendplay(p_command[1], current);
 							}
-							sendplay(p_command[1], current);
 							break;
 						case 1:
 							strcpy( status, "PAUSE" );
