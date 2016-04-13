@@ -1,6 +1,12 @@
 #include "utils.h"
 #include <getopt.h>
 
+/* Default target for copying */
+#define TARGETDIR "player/"
+
+/**
+ * returns free space on the device in KB
+ */
 long freekb(const char * part) {
 	struct statvfs buf;
 	if (0 == statvfs(part, &buf))

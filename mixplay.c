@@ -221,9 +221,6 @@ int main(int argc, char **argv) {
 	if (0 == strlen( blname) ) {
 		strcpy( blname, basedir );
 		strcat( blname, "/blacklist.txt" );
-//		if( access( blname, F_OK ) != -1 ) {
-//			loadBlacklist(blname,1);
-//		}
 	}
 
 	if (0 == strlen( wlname) ) {
@@ -347,8 +344,8 @@ int main(int argc, char **argv) {
 								write( p_command[1], "STOP\n", 6 );
 							break;
 							case 'f':
-								sprintf( tbuf, "%s/%s", current->path, current->name );
-								addToList( wlname, tbuf );
+								// sprintf( tbuf, "%s/%s", current->path, current->name );
+								addToList( wlname, current->name );
 							break;
 						}
 					}

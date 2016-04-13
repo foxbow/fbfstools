@@ -252,6 +252,25 @@ int endsWith( const char *text, const char *suffix ){
 }
 
 /**
+ * checks if text starts with prefix
+ * this function is case insensitive
+ */
+int startsWith( const char *text, const char *prefix ){
+	int i, tlen, plen;
+	tlen=strlen(text);
+	plen=strlen(prefix);
+	if( tlen < plen ) {
+		return 0;
+	}
+	for( i=0; i<plen; i-- ) {
+		if( tolower(text[i]) != tolower(prefix[i]) ) {
+			return 0;
+		}
+	}
+	return -1;
+}
+
+/**
  * Check if a file is a music file
  */
 int isMusic( const char *name ){
@@ -294,18 +313,19 @@ static int isValid( char *entry ){
 
 
 /**
- * @todo: needs some work!
+ * We just allow http/s
  */
 int isURL( const char *uri ){
 	char line[MAXPATHLEN];
-	strncpy( line, uri, MAXPATHLEN );
-	toLower(line);
-	if( strstr( line, "://" ) ) return -1;
+
+	if( startsWith( line, "http://" ) || startsWith( line, "https://" ) ) {
+		return -1;
+	}
 	return 0;
 }
 
 /**
- * helperfunction for scandir() - just return unhidden directories
+ * helperfunction for scandir() - just return unhidden directories and links
  */
 static int dsel( const struct dirent *entry ){
 	return( ( entry->d_name[0] != '.' ) &&

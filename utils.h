@@ -27,9 +27,7 @@
 #define MINSIZE 1024
 /* Buffer for copying files */
 #define BUFFSIZE 512*1024
-/* Default target for copying */
-#define TARGETDIR "player/"
-// #define ARRAYLEN 676
+
 #define ARRAYLEN 85
 #define BITS 680
 // 90% similarity is enough
@@ -51,7 +49,9 @@ struct entry_t {
 	struct entry_t *next;
 };
 
-
+/*
+ * Verbosity handling of the utils functions
+ */
 int getVerbosity();
 int setVerbosity(int);
 int incVerbosity();
@@ -63,18 +63,13 @@ void muteVerbosity();
 void dhline(int r, int c, int len);
 void dvline(int r, int c, int len);
 void drawbox(int r0, int c0, int r1, int c1);
+
+
 /**
- * reads from the fd into the line buffer until either a CR
- * comes or the fd stops sending characters.
- * returns number of read bytes or -1 on overflow.
- */
-int readline( char *line, size_t len, int fd );
-/**
- * entry helper functions
+ * Music helper functions
  */
 // unused?!
 // void wipeTitles( struct entry_t *files );
-
 struct entry_t *recurse( char *curdir, struct entry_t *files );
 struct entry_t *shuffleTitles( struct entry_t *base );
 struct entry_t *rewindTitles( struct entry_t *base );
@@ -83,22 +78,26 @@ struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mix );
 int countTitles( struct entry_t *base );
-
 int loadBlacklist( const char *path );
 int loadWhitelist( const char *path );
-void addToList( const char *path, const char *line );
+char *genPathName( char *name, const char *cd, const size_t len );
+int isMusic( const char *name );
 
+/**
+ * General utility functions
+ */
+void addToList( const char *path, const char *line );
 void setTitle(const char* title);
-void activity();
 void fail( const char* msg, const char* info, int error );
 int fncmp( const char* str1, const char* str2 );
 char *toLower( char *text );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
-int isMusic( const char *name );
 char *strip( char *buff, const char *text, const size_t maxlen );
-char *genPathName( char *name, const char *cd, const size_t len );
 int endsWith( const char *text, const char *suffix );
+int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
+int readline( char *line, size_t len, int fd );
+void activity();
 
 #endif

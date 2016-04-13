@@ -21,6 +21,8 @@ int remtitle( struct entry_t *title ){
 	char path[ MAXPATHLEN ];
 	sprintf( path, "%s/%s", title->path, title->name );
 	printf("Deleting %s!\n", path );
+	removeTitle( title );
+	/**
 	if ( title->prev != NULL ) {
 		if( title->prev->next  != NULL ) title->prev->next=title->next;
 		else fail( "title->prev->next == NULL!", "", 0 );
@@ -29,7 +31,8 @@ int remtitle( struct entry_t *title ){
 		if( title->next->prev != NULL ) title->next->prev=title->prev;
 		else fail( "title->next->prev == NULL", "", 0 );
 	}
-	// free( title );
+	free( title );
+	 **/
 	return remove( path ) ;
 }
 
@@ -104,14 +107,12 @@ int main( int argc, char **argv ){
 							else{
 								buff=root->prev;
 								if(remtitle( root )) fail( "Could not delete file!", root->name, -1 );
-								free(root);
 								root=buff;
 							}
 							break;
 						case '2':
 							buff=runner->prev;
 							if(remtitle( runner )) fail( "Could not delete file!", runner->name, -1 );
-							free(runner);
 							runner=buff;
 							if( runner == root ) runner=runner->next;
 							if( runner == NULL ) runner=root;
