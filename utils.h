@@ -51,14 +51,6 @@ struct entry_t {
 	struct entry_t *next;
 };
 
-/**
- * structure to hold names of directories that should be ignored
- */
-struct blacklist_t {
-	char dir[MAXPATHLEN];
-	struct blacklist_t *next;
-};
-
 
 int getVerbosity();
 int setVerbosity(int);
@@ -93,6 +85,7 @@ struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mi
 int countTitles( struct entry_t *base );
 
 int loadBlacklist( const char *path );
+int loadWhitelist( const char *path );
 void addToList( const char *path, const char *line );
 
 void setTitle(const char* title);

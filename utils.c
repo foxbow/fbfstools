@@ -1,11 +1,20 @@
 #include "utils.h"
 
+
 // Represents a string as a bit array
 typedef unsigned char* strval_t;
 
+struct bwlist_t {
+	char dir[MAXPATHLEN];
+	struct bwlist_t *next;
+};
+
+
 int rpos=0;
+
 static int _ftverbosity=1;
-static struct blacklist_t *blacklist=NULL;
+static struct bwlist_t *blacklist=NULL;
+static struct bwlist_t *whitelist=NULL;
 
 int getVerbosity() {
 	return _ftverbosity;
@@ -254,24 +263,35 @@ int isMusic( const char *name ){
 }
 
 /**
- * filters out invalid files/dirs like hidden (starting with '.')
- * or names that are in the blacklist.
+ * filters pathnames according to black and whitelist
  */
-static int isValid( const char *name ){
+static int isValid( char *entry ){
 	char loname[MAXPATHLEN];
-	struct blacklist_t *ptr = blacklist;
+	struct bwlist_t *ptr = NULL;
 
-	if( name[0] == '.' ) return 0;
-
-	strncpy( loname, name, MAXPATHLEN );
+	strncpy( loname, entry, MAXPATHLEN );
 	toLower( loname );
 
+	// Blacklist has priority
+	ptr=blacklist;
 	while( ptr ){
 		if( strstr( loname, ptr->dir ) ) return 0;
 		ptr=ptr->next;
 	}
-	return -1;
+
+	if( whitelist ) {
+		ptr=whitelist;
+		while( ptr ){
+			if( strstr( loname, ptr->dir ) ) return -1;
+			ptr=ptr->next;
+		}
+		return 0;
+	}
+	else {
+		return -1;
+	}
 }
+
 
 /**
  * @todo: needs some work!
@@ -288,7 +308,8 @@ int isURL( const char *uri ){
  * helperfunction for scandir() - just return unhidden directories
  */
 static int dsel( const struct dirent *entry ){
-	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_DIR ) );
+	return( ( entry->d_name[0] != '.' ) &&
+			( ( entry->d_type == DT_DIR ) || ( entry->d_type == DT_LNK ) ) );
 }
 
 /**
@@ -304,8 +325,7 @@ static int fsel( const struct dirent *entry ){
 static int msel( const struct dirent *entry ){
 	return( ( entry->d_name[0] != '.' ) &&
 			( entry->d_type == DT_REG ) &&
-			isMusic( entry->d_name ) &&
-			isValid( entry->d_name ) );
+			isMusic( entry->d_name ) );
 }
 
 static int getMusic( const char *cd, struct dirent ***musiclist ){
@@ -353,49 +373,72 @@ char *toLower( char *text ){
 	return text;
 }
 
-/**
- * load a blacklist file into the blacklist structure
- */
-int loadBlacklist( const char *path ){
+static int loadBWlist( const char *path, int isbl ){
 	FILE *file = NULL;
-	struct blacklist_t *ptr = NULL;
+	struct bwlist_t *ptr = NULL;
+	struct bwlist_t *bwlist = NULL;
+
 	char *buff;
 	int cnt=0;
 
-	if( NULL != blacklist ) {
-		return -1;
+	if( isbl ) {
+		if( NULL != blacklist )
+			fail("Blacklist already loaded! ", path, ENOTRECOVERABLE );
+	}
+	else {
+		if( NULL != whitelist )
+			fail("Whitelist already loaded! ", path, ENOTRECOVERABLE );
 	}
 
 	buff=malloc( MAXPATHLEN );
 	if( !buff ) fail( "Out of memory", "", errno );
 
 	file=fopen( path, "r" );
-	if( !file ) fail("Couldn't open blacklist ", path,  errno);
+	if( !file ) fail("Couldn't open list ", path,  errno);
 
 	while( !feof( file ) ){
 		buff=fgets( buff, MAXPATHLEN, file );
 		if( buff && strlen( buff ) > 1 ){
-			if( !blacklist ){
-				blacklist=malloc( sizeof( struct blacklist_t ) );
-				ptr=blacklist;
+			if( !bwlist ){
+				bwlist=malloc( sizeof( struct bwlist_t ) );
+				ptr=bwlist;
 			}else{
-				ptr->next=malloc( sizeof( struct blacklist_t ) );
+				ptr->next=malloc( sizeof( struct bwlist_t ) );
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( "Out of memory!", "", errno );
-			strncpy( ptr->dir, toLower(buff), strlen( buff )-1 );
+			strncpy( ptr->dir, toLower(buff), strlen( buff ) );
 			ptr->dir[ strlen(buff)-1 ]=0;
 			cnt++;
 		}
 	}
 
-	if( _ftverbosity > 2 ) {
+	if( _ftverbosity > 1 ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
 	}
 
 	free( buff );
 	fclose( file );
+
+	if( isbl ) {
+		blacklist=bwlist;
+	}
+	else {
+		whitelist=bwlist;
+	}
+
 	return 0;
+}
+
+/**
+ * load a blacklist file into the blacklist structure
+ */
+int loadBlacklist( const char *path ){
+	return loadBWlist( path, 1 );
+}
+
+int loadWhitelist( const char *path ){
+	return loadBWlist( path, 0 );
 }
 
 /**
@@ -665,23 +708,27 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 			strncat( dirbuff, "/", MAXPATHLEN );
 		}
 		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
-		file=fopen( dirbuff, "r");
-		if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
-		if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
 
-		buff=(struct entry_t *)malloc(sizeof(struct entry_t));
-		if(buff == NULL) fail("Out of memory!", "", errno);
-		buff->prev=files;
-		buff->next=NULL;
-		if(files != NULL)files->next=buff;
+		if( isValid(dirbuff) ) {
+			file=fopen( dirbuff, "r");
+			if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
+			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
 
-		strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
-		genPathName( buff->display, dirbuff, MAXPATHLEN );
-//		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
-		strncpy( buff->path, curdir, MAXPATHLEN );
-		buff->length=ftell( file )/1024;
-		files=buff;
-		fclose(file);
+			buff=(struct entry_t *)malloc(sizeof(struct entry_t));
+			if(buff == NULL) fail("Out of memory!", "", errno);
+
+			strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
+			genPathName( buff->display, dirbuff, MAXPATHLEN );
+	//		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
+			strncpy( buff->path, curdir, MAXPATHLEN );
+
+			buff->prev=files;
+			buff->next=NULL;
+			if(files != NULL)files->next=buff;
+			buff->length=ftell( file )/1024;
+			files=buff;
+			fclose(file);
+		}
 		free(entry[i]);
 	}
 	free(entry);
@@ -692,10 +739,8 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	}
 	for( i=0; i<num; i++ ) {
 		activity();
-		if( isValid( entry[i]->d_name ) ) {
-			sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
-			files=recurse( dirbuff, files );
-		}
+		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
+		files=recurse( dirbuff, files );
 		free(entry[i]);
 	}
 	free(entry);

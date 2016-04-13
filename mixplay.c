@@ -13,8 +13,9 @@ volatile int running=1;
  */
 void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-m] [path|URL]\n", progname );
+	printf( "Usage: %s [-b <file>] [-w <file>] [-m] [path|URL]\n", progname );
 	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
+	printf( "-w <file>  : Whitelist of names to include [unset]\n" );
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
 	printf( "-r         : Repeat\n");
 	printf( "[path]     : path to the music files [.]\n" );
@@ -142,6 +143,7 @@ int main(int argc, char **argv) {
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char blname[MAXPATHLEN] = "";
+	char wlname[MAXPATHLEN] = "";
 	int key;
 	char c;
 	char *b;
@@ -164,7 +166,7 @@ int main(int argc, char **argv) {
 	if (NULL == getcwd(basedir, MAXPATHLEN))
 		fail("Could not get current dir!", "", errno);
 
-	while ((c = getopt(argc, argv, "mb:rv")) != -1) {
+	while ((c = getopt(argc, argv, "mb:w:rv")) != -1) {
 		switch (c) {
 		case 'v': // not documented and pretty useless in normal use
 			incVerbosity();
@@ -173,7 +175,12 @@ int main(int argc, char **argv) {
 			mix = 1;
 			break;
 		case 'b':
-			strncpy(blname, optarg, MAXPATHLEN);
+			strcpy(blname, optarg);
+			loadBlacklist(optarg);
+			break;
+		case 'w':
+			strcpy(wlname, optarg);
+			loadWhitelist(optarg);
 			break;
 		case 'r':
 			repeat = 1;
@@ -211,15 +218,17 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (0 != strlen( blname) ) {
-		loadBlacklist(blname);
-	}
-	else {
+	if (0 == strlen( blname) ) {
 		strcpy( blname, basedir );
 		strcat( blname, "/blacklist.txt" );
-		if( access( blname, F_OK ) != -1 ) {
-			loadBlacklist(blname);
-		}
+//		if( access( blname, F_OK ) != -1 ) {
+//			loadBlacklist(blname,1);
+//		}
+	}
+
+	if (0 == strlen( wlname) ) {
+		strcpy( wlname, basedir );
+		strcat( wlname, "/whitelist.txt" );
 	}
 
 	if( NULL == root ) root = recurse(basedir, root);
@@ -339,9 +348,7 @@ int main(int argc, char **argv) {
 							break;
 							case 'f':
 								sprintf( tbuf, "%s/%s", current->path, current->name );
-								strcpy(dirbuf, basedir);
-								strcat(dirbuf, "/favourites.m3u" );
-								addToList( dirbuf, tbuf );
+								addToList( wlname, tbuf );
 							break;
 						}
 					}
