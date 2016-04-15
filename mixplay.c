@@ -161,12 +161,12 @@ int main(int argc, char **argv) {
 	int order=1;
 
 	// disable all output from utils
-	muteVerbosity();
+	// muteVerbosity();
 
 	if (NULL == getcwd(basedir, MAXPATHLEN))
 		fail("Could not get current dir!", "", errno);
 
-	while ((c = getopt(argc, argv, "mb:w:rv")) != -1) {
+	while ((c = getopt(argc, argv, "mb:w:rvs")) != -1) {
 		switch (c) {
 		case 'v': // not documented and pretty useless in normal use
 			incVerbosity();
@@ -184,6 +184,19 @@ int main(int argc, char **argv) {
 			break;
 		case 'r':
 			repeat = 1;
+			break;
+		case 's':
+			printf("Search: ");
+			fflush(stdout);
+			readline( line, MAXPATHLEN, fileno(stdin) );
+			if( strlen(line) > 2 ) {
+				addToWhitelist( line );
+			}
+			else {
+				puts("Ignoring less than three characters!");
+				sleep(3);
+				return -1;
+			}
 			break;
 		default:
 			usage(argv[0]);

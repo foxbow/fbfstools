@@ -39,7 +39,7 @@ void clean( char* target ){
 			if( NULL == dirbuff ){
 				if( -1 == unlink( buff ) ) fail( "Couldn't delete file ", buff, errno );
 				if( getVerbosity() > 0 ){
-					activity();
+					activity("Cleaning");
 				}
 			}else{
 				closedir( dirbuff );
@@ -81,7 +81,7 @@ void copy( struct entry_t *title, const char* target, int index ){
 		if( getVerbosity() > 0 ){
 			if( getVerbosity() > 2 ) printf( "Copy %s to %s ", title->path, filename );
 			else if( getVerbosity() == 1 )  printf( "Copy Track %03i ", index );
-			activity();
+			else activity("Filling");
 		}
 	}
 
@@ -126,17 +126,17 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 		}
 
 		/* Check if the current file is a valid one */
-		if ( ( list->length < MAXSIZE ) && ( list->length > MINSIZE ) ) {
+		if ( ( list->size < MAXSIZE ) && ( list->size > MINSIZE ) ) {
 			/* Are we filling the whole device? */
 			if( 0 == maxlen ){
-				if( list->length < size ){
+				if( list->size < size ){
 					copy( list, target, no );
 					no++;
 					size=freekb( target );
 					if( getVerbosity() > 0 ) printf("[%3li%%]\n", 100-((100*size)/maxsize));
 				}				
 			}else{			
-				size=size+list->length;
+				size=size+list->size;
 				if ( size < maxlen ) {
 					copy( list, target, no );
 					no++;

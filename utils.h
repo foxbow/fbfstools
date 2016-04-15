@@ -41,11 +41,19 @@
 #define RANDOM(x) (rand()%x)
 
 struct entry_t {
+	long int key;
 	struct entry_t *prev;
 	char path[MAXPATHLEN];
 	char name[MAXPATHLEN];
 	char display[MAXPATHLEN];
-	long int length;
+	long int size;
+	char artist[MAXPATHLEN];
+	/** preparation for DB support **
+	char title[MAXPATHLEN];
+	char album[MAXPATHLEN];
+	int  length;
+	int  rating;
+	********************************/
 	struct entry_t *next;
 };
 
@@ -80,8 +88,9 @@ struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mi
 int countTitles( struct entry_t *base );
 int loadBlacklist( const char *path );
 int loadWhitelist( const char *path );
-char *genPathName( char *name, const char *cd, const size_t len );
+int genPathName( char *name, const char *cd, const size_t len );
 int isMusic( const char *name );
+int addToWhitelist( const char *line );
 
 /**
  * General utility functions
@@ -98,6 +107,6 @@ int endsWith( const char *text, const char *suffix );
 int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
 int readline( char *line, size_t len, int fd );
-void activity();
+void activity( const char *msg );
 
 #endif

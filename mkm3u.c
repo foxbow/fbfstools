@@ -47,7 +47,7 @@ void shufflem3u( struct entry_t *list, int cnt,  FILE *fp ) {
 		}
 
 		// Check if the current file is a valid one */
-		if ( ( list->length < MAXSIZE ) && ( list->length > MINSIZE ) ) {
+		if ( ( list->size < MAXSIZE ) && ( list->size > MINSIZE ) ) {
 			fprintf( fp, "%s/%s\n", list->path, list->name );
 		}
 
