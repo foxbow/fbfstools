@@ -654,7 +654,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 
 		if( artguard && lastname ) {
 			guard=runner;
-			while( 75 < fncmp( runner->display, lastname ) ) {
+			while( 75 < fncmp( runner->artist, lastname ) ) {
 				runner=runner->next;
 				if( runner == NULL ) {
 					runner=base;
@@ -666,7 +666,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			}
 		}
 
-		lastname=runner->display;
+		lastname=runner->artist;
 
 		// Remove entry from base
 		if(runner==base) base=runner->next;
@@ -780,7 +780,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 			alen=genPathName( buff->display, dirbuff, MAXPATHLEN );
 	//		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
 			strncpy( buff->path, curdir, MAXPATHLEN );
-			strncpy( buff->artist, curdir, alen );
+			strncpy( buff->artist, buff->display, alen );
 			buff->artist[alen+1]=0;
 			buff->prev=files;
 			buff->next=NULL;

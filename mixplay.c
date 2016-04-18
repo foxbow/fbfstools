@@ -479,6 +479,7 @@ int main(int argc, char **argv) {
 						switch (cmd) {
 						case 0:
 							next = skipTitles( current, order, repeat, mix );
+							order=1;
 							if ( next == current ) {
 								strcpy( status, "STOP" );
 							}
