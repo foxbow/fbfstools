@@ -654,7 +654,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 
 		if( artguard && lastname ) {
 			guard=runner;
-			while( 75 < fncmp( lastname, runner->artist ) ) {
+			while( 75 < fncmp( runner->display, lastname ) ) {
 				runner=runner->next;
 				if( runner == NULL ) {
 					runner=base;
@@ -666,7 +666,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			}
 		}
 
-		lastname=runner->artist;
+		lastname=runner->display;
 
 		// Remove entry from base
 		if(runner==base) base=runner->next;
@@ -685,8 +685,9 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			end->next=runner;
 		}
 		end=runner;
-	}
 
+		activity("Shuffling ");
+	}
 	return rewindTitles( end );
 }
 
