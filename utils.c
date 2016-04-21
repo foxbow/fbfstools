@@ -412,7 +412,7 @@ static int loadBWlist( const char *path, int isbl ){
 			fail("Whitelist already loaded! ", path, ENOTRECOVERABLE );
 	}
 
-	buff=malloc( MAXPATHLEN );
+	buff=calloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( "Out of memory", "", errno );
 
 	file=fopen( path, "r" );
@@ -422,10 +422,10 @@ static int loadBWlist( const char *path, int isbl ){
 		buff=fgets( buff, MAXPATHLEN, file );
 		if( buff && strlen( buff ) > 1 ){
 			if( !bwlist ){
-				bwlist=malloc( sizeof( struct bwlist_t ) );
+				bwlist=calloc( 1, sizeof( struct bwlist_t ) );
 				ptr=bwlist;
 			}else{
-				ptr->next=malloc( sizeof( struct bwlist_t ) );
+				ptr->next=calloc( 1, sizeof( struct bwlist_t ) );
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( "Out of memory!", "", errno );
@@ -466,7 +466,7 @@ int loadWhitelist( const char *path ){
 
 int addToWhitelist( const char *line ) {
 	struct bwlist_t *entry;
-	entry=malloc( sizeof( struct bwlist_t ) );
+	entry=calloc( 1, sizeof( struct bwlist_t ) );
 	strncpy( entry->dir, line, MAXPATHLEN );
 	if( !whitelist ) {
 		whitelist=entry;
@@ -502,7 +502,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 	struct entry_t *current=NULL;
 	char *buff;
 
-	buff=malloc( MAXPATHLEN );
+	buff=calloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( "Out of memory", "", errno );
 
 	fp=fopen( path, "r" );
@@ -560,11 +560,10 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	char buff[MAXPATHLEN];
 	char *b;
 
-	root = (struct entry_t*) malloc(sizeof(struct entry_t));
+	root = (struct entry_t*) calloc(1, sizeof(struct entry_t));
 	if (NULL == root) {
 		fail("Malloc failed", "", errno);
 	}
-	memset( root, 0, sizeof(struct entry_t));
 
 	if( NULL != base ) {
 		root->next=base->next;
@@ -800,7 +799,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 			if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
 			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
 
-			buff=(struct entry_t *)malloc(sizeof(struct entry_t));
+			buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
 			if(buff == NULL) fail("Out of memory!", "", errno);
 
 			strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
@@ -905,8 +904,6 @@ int fncmp( const char* str1, const char* str2 ){
 
 	str1val=calloc( CMP_ARRAYLEN, sizeof( char ) );
 	str2val=calloc( CMP_ARRAYLEN, sizeof( char ) );
-	memset( str1val, 0, CMP_ARRAYLEN );
-	memset( str2val, 0, CMP_ARRAYLEN );
 
 	max1=computestrval( str1, str1val );
 	max2=computestrval( str2, str2val );
