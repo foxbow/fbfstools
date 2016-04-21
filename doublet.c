@@ -1,6 +1,9 @@
 #include "utils.h"
 
-#include <getopt.h>
+// 90% similarity is enough
+#define CMP_TRIGGER 90
+// 10k filesize difference
+#define CMP_RANGE 10
 
 
 // struct entry_t *root=NULL;
@@ -12,8 +15,8 @@ void usage( char *progname ){
 	printf( "%s - find and remove duplicate music files\n", progname );
 	printf( "Usage: %s [-s <sourcedir>] [-t <trigger>] [-r <range>]\n", progname );
 	printf( "-s <path>    : set path to directory with music [current dir]\n" );
-	printf( "-r <range>   : file size range for similarity [%i]k\n", RANGE );
-	printf( "-t <trigger> : triggervalue for filename similarity [%i]%%\n", TRIGGER );
+	printf( "-r <range>   : file size range for similarity [%i]k\n", CMP_RANGE );
+	printf( "-t <trigger> : triggervalue for filename similarity [%i]%%\n", CMP_TRIGGER );
 	exit(0);
 }
 
@@ -41,8 +44,8 @@ int remtitle( struct entry_t *title ){
  */
 int main( int argc, char **argv ){
 	int result=0;
-	int trigger=TRIGGER;
-	int range=RANGE;
+	int trigger=CMP_TRIGGER;
+	int range=CMP_RANGE;
 	char curdir[MAXPATHLEN];
 	char c;
 	struct entry_t *runner, *buff;

@@ -1,5 +1,4 @@
 #include "utils.h"
-#include <getopt.h>
 
 /* Default values */
 /* Max size of an MP3 file - to avoid full albums */

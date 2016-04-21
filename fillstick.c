@@ -3,6 +3,13 @@
 
 /* Default target for copying */
 #define TARGETDIR "player/"
+/* Buffer for copying files */
+#define CP_BUFFSIZE 512*1024
+
+/* Max size of an MP3 file - to avoid full albums */
+#define MP3_MAXSIZE 15*1024
+/* Min size - to avoid fillers */
+#define MP3_MINSIZE 1024
 
 /**
  * returns free space on the device in KB
@@ -60,7 +67,7 @@ void copy( struct entry_t *title, const char* target, int index ){
 	unsigned char *buffer;
 	int size;
 
-	buffer=malloc( BUFFSIZE );
+	buffer=malloc( CP_BUFFSIZE );
 	if( NULL == buffer ) fail( "Out of memory!", "", errno );
 	sprintf( filename, "%strack%03i.mp3", target, index);
 
@@ -73,11 +80,11 @@ void copy( struct entry_t *title, const char* target, int index ){
 	out=fopen( filename, "wb" );
 	if( NULL == out ) fail( "Couldn't open outfile ", filename, errno );
 
-	size = fread( buffer, sizeof( unsigned char ), BUFFSIZE, in );
+	size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
 	while( 0 != size ){
 		if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) )
 			fail( "Target is full!", "", errno );
-		size = fread( buffer, sizeof( unsigned char ), BUFFSIZE, in );
+		size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
 		if( getVerbosity() > 0 ){
 			if( getVerbosity() > 2 ) printf( "Copy %s to %s ", title->path, filename );
 			else if( getVerbosity() == 1 )  printf( "Copy Track %03i ", index );
@@ -126,7 +133,7 @@ void writePlaylist( struct entry_t *list, long int maxlen, const char* target ){
 		}
 
 		/* Check if the current file is a valid one */
-		if ( ( list->size < MAXSIZE ) && ( list->size > MINSIZE ) ) {
+		if ( ( list->size < MP3_MAXSIZE ) && ( list->size > MP3_MINSIZE ) ) {
 			/* Are we filling the whole device? */
 			if( 0 == maxlen ){
 				if( list->size < size ){
@@ -231,7 +238,7 @@ int main( int argc, char **argv ){
 			printf( "Filling all space on target\n" );
 		else
 			printf( "Size  : %i MB\n", mbsize/1024 );
-		printf( "Using MP3 files between %i and %i MB\n", MINSIZE/1024, MAXSIZE/1024 );
+		printf( "Using MP3 files between %i and %i MB\n", MP3_MINSIZE/1024, MP3_MAXSIZE/1024 );
 		if( 0 != blname[0] )
 			printf( "Using %s as blacklist\n", blname );
 		if(!delete)

@@ -4,14 +4,12 @@
 #include <signal.h>
 #include <ncurses.h>
 
-#define BUFLEN 256
-
-volatile int running=1;
+#define LINE_BUFLEN 256
 
 /**
  * print out CLI usage
  */
-void usage( char *progname ){
+static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
 	printf( "Usage: %s [-b <file>] [-w <file>] [-m] [path|URL]\n", progname );
 	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
@@ -25,11 +23,11 @@ void usage( char *progname ){
 /**
  * Draw the application frame
  */
-void drawframe(char *station, struct entry_t *current, const char *status, int stream ) {
+static void drawframe(char *station, struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos, rows;
 	int row, col;
 	int middle;
-	char buff[BUFLEN];
+	char buff[LINE_BUFLEN];
 	struct entry_t *runner;
 
 	refresh();
@@ -61,6 +59,10 @@ void drawframe(char *station, struct entry_t *current, const char *status, int s
 		// Set the current playing title
 		if( NULL != current ) {
 			strip(buff, current->display, maxlen);
+			if(current->rating) {
+				attron(A_BOLD);
+			}
+
 		}
 		else {
 			strcpy( buff, "---" );
@@ -70,6 +72,7 @@ void drawframe(char *station, struct entry_t *current, const char *status, int s
 		pos = (col - strlen(buff)) / 2;
 		mvhline(middle, 2, ' ', maxlen + 2);
 		mvprintw(middle, pos, "%s", buff);
+		attroff(A_BOLD);
 
 		dhline( middle+1, 1, col-3 );
 
@@ -85,6 +88,9 @@ void drawframe(char *station, struct entry_t *current, const char *status, int s
 			for( i=middle-2; i>1; i-- ){
 				if( NULL != runner ) {
 					strip( buff, runner->display, maxlen );
+					if(runner->rating) {
+						attron(A_BOLD);
+					}
 					runner=runner->prev;
 				}
 				else {
@@ -92,12 +98,16 @@ void drawframe(char *station, struct entry_t *current, const char *status, int s
 				}
 				mvhline( i, 2, ' ', maxlen + 2);
 				mvprintw( i, 3, "%s", buff);
+				attroff(A_BOLD);
 			}
 			// past songs
 			runner=current->next;
 			for( i=middle+2; i<row-2; i++ ){
 				if( NULL != runner ) {
 					strip( buff, runner->display, maxlen );
+					if(runner->rating) {
+						attron(A_BOLD);
+					}
 					runner=runner->next;
 				}
 				else {
@@ -105,23 +115,24 @@ void drawframe(char *station, struct entry_t *current, const char *status, int s
 				}
 				mvhline( i, 2, ' ', maxlen + 2);
 				mvprintw( i, 3, "%s", buff);
+				attroff(A_BOLD);
 			}
 		}
 	}
 	refresh();
 }
 
-void sendplay( int fd, struct entry_t *song ) {
-	char line[BUFLEN];
+static void sendplay( int fd, struct entry_t *song ) {
+	char line[LINE_BUFLEN];
 
-	strncpy( line, "load ", BUFLEN );
+	strncpy( line, "load ", LINE_BUFLEN );
 	if( strlen(song->path) != 0 ){
-		strncat( line, song->path, BUFLEN );
-		strncat( line, "/", BUFLEN );
+		strncat( line, song->path, LINE_BUFLEN );
+		strncat( line, "/", LINE_BUFLEN );
 	}
-	strncat( line, song->name, BUFLEN );
-	strncat( line, "\n", BUFLEN );
-	write( fd, line, BUFLEN );
+	strncat( line, song->name, LINE_BUFLEN );
+	strncat( line, "\n", LINE_BUFLEN );
+	write( fd, line, LINE_BUFLEN );
 }
 
 int main(int argc, char **argv) {
@@ -136,10 +147,10 @@ int main(int argc, char **argv) {
 	int p_status[2];
 	int p_command[2];
 
-	char line[BUFLEN];
-	char status[BUFLEN] = "INIT";
-	char tbuf[BUFLEN];
-	char station[BUFLEN] = "mixplay "VERSION;
+	char line[LINE_BUFLEN];
+	char status[LINE_BUFLEN] = "INIT";
+	char tbuf[LINE_BUFLEN];
+	char station[LINE_BUFLEN] = "mixplay "VERSION;
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char blname[MAXPATHLEN] = "";
@@ -159,6 +170,8 @@ int main(int argc, char **argv) {
 	int repeat = 0;
 	// normal playing order
 	int order=1;
+	// mpg123 is up and running
+	int running;
 
 	// disable all output from utils
 	// muteVerbosity();
@@ -249,6 +262,9 @@ int main(int argc, char **argv) {
 		else
 			root = rewindTitles(root );
 
+		loadWhitelist(wlname);
+		checkWhitelist(root);
+
 		// create communication pipes
 		pipe(p_status);
 		pipe(p_command);
@@ -273,6 +289,7 @@ int main(int argc, char **argv) {
 			close(p_command[0]);
 			close(p_status[1]);
 
+			// Start mpg123 in Remote mode
 			execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
 			fail("Could not exec", "mpg123", errno);
 		}
@@ -280,6 +297,8 @@ int main(int argc, char **argv) {
 		else {
 			close(p_command[0]);
 			close(p_status[1]);
+
+			running=1;
 
 			// Start curses mode
 			initscr();
@@ -358,7 +377,10 @@ int main(int argc, char **argv) {
 							break;
 							case 'f':
 								// sprintf( tbuf, "%s/%s", current->path, current->name );
-								addToList( wlname, current->name );
+								if(0 == current->rating) {
+									addToList( wlname, current->name );
+									current->rating=1;
+								}
 							break;
 						}
 					}
@@ -385,7 +407,7 @@ int main(int argc, char **argv) {
 						// ICY stream info
 						if( NULL != strstr( line, "ICY-" ) ) {
 							if( NULL != strstr( line, "ICY-NAME: " ) ) {
-								strip( station, line+13, BUFLEN );
+								strip( station, line+13, LINE_BUFLEN );
 							}
 							if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
 								b = b + 13;
@@ -393,25 +415,25 @@ int main(int argc, char **argv) {
 								if( strlen(current->display) != 0 ) {
 									insertTitle( current, current->display );
 								}
-								strip(current->display, b, BUFLEN );
+								strip(current->display, b, LINE_BUFLEN );
 							}
 						}
 						// standard mpg123 info
 						else {
 							if (NULL != (b = strstr(line, "title:"))) {
-								strip(tbuf, b + 6, BUFLEN);
+								strip(tbuf, b + 6, LINE_BUFLEN);
 								// do not redraw yet, wait for the artist
 							}
 							// line starts with 'Artist:' this means we had a 'Title:' line before
 							else if (NULL != (b = strstr(line, "artist:"))) {
-								strip(current->display, b + 7, BUFLEN);
+								strip(current->display, b + 7, LINE_BUFLEN);
 								strcat(current->display, " - ");
 								strip(current->display + strlen(current->display), tbuf,
-										BUFLEN - strlen(current->display));
+										LINE_BUFLEN - strlen(current->display));
 							}
 							// Album
 							else if (NULL != (b = strstr(line, "album:"))) {
-								strip(station, b + 6, BUFLEN);
+								strip(station, b + 6, LINE_BUFLEN);
 							}
 						}
 						redraw=1;
@@ -455,7 +477,7 @@ int main(int argc, char **argv) {
 						// file play
 						if( 0 != rem ) {
 							q=(30*in)/(rem+in);
-							memset( tbuf, 0, BUFLEN );
+							memset( tbuf, 0, LINE_BUFLEN );
 							for( i=0; i<30; i++ ) {
 								if( i < q ) tbuf[i]='=';
 								else if( i == q ) tbuf[i]='>';

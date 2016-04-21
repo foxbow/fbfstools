@@ -16,24 +16,16 @@
 
 #include <time.h>
 
+#include <getopt.h>
+
 #define HOR '-'
 #define VER '|'
 #define EDG "+"
 
 /* Default values */
-/* Max size of an MP3 file - to avoid full albums */
-#define MAXSIZE 15*1024
-/* Min size - to avoid fillers */
-#define MINSIZE 1024
-/* Buffer for copying files */
-#define BUFFSIZE 512*1024
 
-#define ARRAYLEN 85
-#define BITS 680
-// 90% similarity is enough
-#define TRIGGER 90
-// 10k filesize difference
-#define RANGE 10
+#define CMP_ARRAYLEN 85
+#define CMP_BITS 680
 
 #ifndef MAXPATHLEN
   #define MAXPATHLEN 256
@@ -48,11 +40,11 @@ struct entry_t {
 	char display[MAXPATHLEN];
 	long int size;
 	char artist[MAXPATHLEN];
+	int  rating;
 	/** preparation for DB support **
 	char title[MAXPATHLEN];
 	char album[MAXPATHLEN];
 	int  length;
-	int  rating;
 	********************************/
 	struct entry_t *next;
 };
@@ -91,6 +83,7 @@ int loadWhitelist( const char *path );
 int genPathName( char *name, const char *cd, const size_t len );
 int isMusic( const char *name );
 int addToWhitelist( const char *line );
+int checkWhitelist( struct entry_t *root );
 
 /**
  * General utility functions

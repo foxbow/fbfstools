@@ -6,7 +6,6 @@
  */
 
 #include "utils.h"
-#include <sys/stat.h>
 
 /**
  * create the name.for a playlist based on the directory

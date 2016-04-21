@@ -431,6 +431,7 @@ static int loadBWlist( const char *path, int isbl ){
 			if( !ptr ) fail( "Out of memory!", "", errno );
 			strncpy( ptr->dir, toLower(buff), strlen( buff ) );
 			ptr->dir[ strlen(buff)-1 ]=0;
+			ptr->next=NULL;
 			cnt++;
 		}
 	}
@@ -737,6 +738,32 @@ struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mi
 	return current;
 }
 
+int checkWhitelist( struct entry_t *root ) {
+	char loname[MAXPATHLEN];
+	struct bwlist_t *ptr = NULL;
+	struct entry_t *runner=root;
+
+	if(!whitelist) return -1;
+
+	while ( NULL != runner) {
+		sprintf( loname, "%s/%s", runner->path, runner->name );
+		toLower( loname );
+		runner->rating=0;
+		ptr=whitelist;
+		while( ptr ){
+			if( strstr( loname, ptr->dir ) ){
+				runner->rating=1;
+				break;
+			}
+			ptr=ptr->next;
+		}
+		runner=runner->next;
+		activity("Favourites ");
+	}
+	return 0;
+}
+
+
 /*
  * Steps recursively through a directory and collects all music files in a list
  * curdir: current directory path
@@ -822,7 +849,7 @@ static void setBit( int pos, strval_t val ){
 static int getMax( strval_t val ){
 	int pos, retval=0;
 	unsigned char c;
-	for(pos=0; pos<ARRAYLEN;pos++){
+	for(pos=0; pos<CMP_ARRAYLEN;pos++){
 		c=val[pos];
 		while( c != 0 ){
 			if( c &  1 ) retval++;
@@ -855,7 +882,7 @@ static int vecmult( strval_t val1, strval_t val2 ){
 	int cnt;
 	unsigned char c;
 
-	for( cnt=0; cnt<ARRAYLEN; cnt++ ){
+	for( cnt=0; cnt<CMP_ARRAYLEN; cnt++ ){
 		c=val1[cnt] & val2[cnt];
 		while( c != 0 ){
 			if( c &  1 ) result++;
@@ -876,10 +903,10 @@ int fncmp( const char* str1, const char* str2 ){
 	long result;
 	float step;
 
-	str1val=calloc( ARRAYLEN, sizeof( char ) );
-	str2val=calloc( ARRAYLEN, sizeof( char ) );
-	memset( str1val, 0, ARRAYLEN );
-	memset( str2val, 0, ARRAYLEN );
+	str1val=calloc( CMP_ARRAYLEN, sizeof( char ) );
+	str2val=calloc( CMP_ARRAYLEN, sizeof( char ) );
+	memset( str1val, 0, CMP_ARRAYLEN );
+	memset( str2val, 0, CMP_ARRAYLEN );
 
 	max1=computestrval( str1, str1val );
 	max2=computestrval( str2, str2val );
