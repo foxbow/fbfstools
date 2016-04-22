@@ -33,19 +33,18 @@
 #define RANDOM(x) (rand()%x)
 
 struct entry_t {
-	long int key;
 	struct entry_t *prev;
-	char path[MAXPATHLEN];
-	char name[MAXPATHLEN];
-	char display[MAXPATHLEN];
-	long int size;
-	char artist[MAXPATHLEN];
-	int  rating;
-	/** preparation for DB support **
-	char title[MAXPATHLEN];
-	char album[MAXPATHLEN];
-	int  length;
-	********************************/
+	unsigned long key;			// DB key/index
+	char path[MAXPATHLEN];		// path on the filesystem to the file
+	char name[MAXPATHLEN];		// filename
+	char display[MAXPATHLEN];	// displayname (artist - title)
+	unsigned long size;			// size in kb
+	char artist[MAXPATHLEN];	// Artist info
+	int  rating;				// 1=favourite
+	char title[MAXPATHLEN];		// Title info (from mp3)
+	char album[MAXPATHLEN];		// Album info (from mp3)
+	int  length;				// length in seconds (from mp3)
+	unsigned long played;		// play counter
 	struct entry_t *next;
 };
 

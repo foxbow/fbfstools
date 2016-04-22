@@ -10,7 +10,7 @@ struct bwlist_t {
 };
 
 
-int rpos=0;
+static int rpos=0;
 
 static int _ftverbosity=1;
 static struct bwlist_t *blacklist=NULL;
@@ -53,6 +53,9 @@ void setTitle(const char* title) {
 char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
 	int pos=0;
+
+	// clear target buffer
+	memset( buff, 0, maxlen );
 
 	// Cut off leading spaces and special chars
 	while( ( pos < len ) && ( isspace( text[pos] ) ) ) pos++;
@@ -380,10 +383,12 @@ void wipeTitles( struct entry_t *files ){
  */
 void activity( const char *msg ){
 	char roller[5]="|/-\\";
-	if( _ftverbosity ) {
-		rpos=(rpos+1)%4;
-		printf( "%s %c\r", msg, roller[rpos] ); fflush( stdout );
+	int pos;
+	if( _ftverbosity && ( rpos%100 == 0 )) {
+		pos=(rpos/100)%4;
+		printf( "%s %c\r", msg, roller[pos] ); fflush( stdout );
 	}
+	rpos=(rpos+1)%400;
 }	
 
 /*
