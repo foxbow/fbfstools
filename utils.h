@@ -18,10 +18,6 @@
 
 #include <getopt.h>
 
-#define HOR '-'
-#define VER '|'
-#define EDG "+"
-
 /* Default values */
 
 #define CMP_ARRAYLEN 85
@@ -55,14 +51,6 @@ int getVerbosity();
 int setVerbosity(int);
 int incVerbosity();
 void muteVerbosity();
-
-/**
- * curses helper functions
- */
-void dhline(int r, int c, int len);
-void dvline(int r, int c, int len);
-void drawbox(int r0, int c0, int r1, int c1);
-
 
 /**
  * Music helper functions
