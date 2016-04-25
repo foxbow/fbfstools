@@ -70,7 +70,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 		setTitle(buff);
 
 		pos = (col - strlen(buff)) / 2;
-		mvhline(middle, 2, ' ', maxlen + 4);
+		mvhline(middle, 2, ' ', maxlen + 2);
 		mvprintw(middle, pos, "%s", buff);
 		attroff(A_BOLD);
 
@@ -78,7 +78,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 
 		// print the status
 		strncpy(buff, status, maxlen);
-		pos = (col - (strlen(buff) + 4)) / 2;
+		pos = (col - (strlen(buff) + 2)) / 2;
 		mvprintw( row - 2, pos, " %s ", buff);
 
 		// song list
@@ -96,7 +96,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 				else {
 					strcpy( buff, "---" );
 				}
-				mvhline( i, 2, ' ', maxlen + 4);
+				mvhline( i, 2, ' ', maxlen + 2);
 				mvprintw( i, 3, "%s", buff);
 				attroff(A_BOLD);
 			}
@@ -113,7 +113,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 				else {
 					strcpy( buff, "---" );
 				}
-				mvhline( i, 2, ' ', maxlen + 4);
+				mvhline( i, 2, ' ', maxlen + 2);
 				mvprintw( i, 3, "%s", buff);
 				attroff(A_BOLD);
 			}
